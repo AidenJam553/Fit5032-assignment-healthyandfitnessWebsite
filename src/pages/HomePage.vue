@@ -1,5 +1,22 @@
 <script setup>
-// Home page is currently static
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+
+const overlayOpacity = ref(0)
+
+function updateOpacity() {
+  const max = Math.max(200, window.innerHeight * 0.8)
+  const y = window.scrollY || 0
+  overlayOpacity.value = Math.min(1, Math.max(0, y / max))
+}
+
+onMounted(() => {
+  updateOpacity()
+  window.addEventListener('scroll', updateOpacity, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', updateOpacity)
+})
 </script>
 
 <template>
@@ -30,6 +47,8 @@
           <router-link class="btn btn--ghost" to="/register">Create Account</router-link>
         </div>
       </div>
+      <div class="hero__overlay" :style="{ opacity: overlayOpacity }"></div>
+      <div class="scroll-cue" aria-hidden="true">Scroll</div>
     </section>
 
     <main class="container content">
@@ -159,8 +178,12 @@
 
 .page { background: var(--green-50); color: #000; }
 .hero {
-  background: linear-gradient(180deg, #dcfce7, #f0fdf4 60%, #ffffff 100%);
+  position: relative;
+  background: url('/hero.png') center/cover no-repeat;
   border-bottom: 1px solid var(--green-100);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
 }
 .hero__inner {
   padding: 56px 0 64px;
@@ -177,6 +200,15 @@
   max-width: 680px;
 }
 .hero__actions { display: flex; gap: 12px; margin-top: 20px; }
+
+.scroll-cue { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); color: var(--green-800); font-size: 12px; letter-spacing: .15em; }
+.scroll-cue::after { content: ''; display: block; width: 24px; height: 24px; margin: 6px auto 0; border: 2px solid var(--green-700); border-left: 0; border-top: 0; transform: rotate(45deg); animation: bob 1.5s infinite; }
+
+@keyframes bob { 0%, 100% { transform: rotate(45deg) translate(0, 0); } 50% { transform: rotate(45deg) translate(4px, 4px); } }
+
+/* bottom fade to reveal content on scroll */
+.hero::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 160px; background: linear-gradient(to bottom, rgba(255,255,255,0), #ffffff 60%, #ffffff); pointer-events: none; }
+.hero__overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(240,253,244,0.8) 0%, rgba(255,255,255,0.9) 60%, #ffffff 100%); transition: opacity .2s linear; pointer-events: none; }
 
 .content { padding: 28px 0 56px; }
 
