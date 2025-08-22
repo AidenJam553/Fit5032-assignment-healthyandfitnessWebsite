@@ -26,8 +26,8 @@
           and become a better version of yourself.
         </p>
         <div class="hero__actions">
-          <button class="btn btn--primary">Log In</button>
-          <button class="btn btn--ghost">Create Account</button>
+          <router-link class="btn btn--primary" to="/login">Log In</router-link>
+          <router-link class="btn btn--ghost" to="/register">Create Account</router-link>
         </div>
       </div>
     </section>
@@ -102,8 +102,8 @@
 }
 
 .topbar {
-  background: white;
-  border-bottom: 1px solid var(--border);
+  background: #ffffff;
+  border-bottom: 1px solid var(--green-100);
 }
 .topbar__inner {
   display: flex;
@@ -114,37 +114,39 @@
 .logo {
   font-weight: 800;
   font-size: 20px;
-  color: var(--green-700);
+  color: #0f172a;
 }
 .nav {
   display: none;
   gap: 20px;
 }
 .nav__link {
-  color: var(--text-700);
+  color: #0f172a;
   text-decoration: none;
 }
 .nav__link.active {
   color: var(--green-700);
   font-weight: 600;
 }
+.nav__link:hover { color: var(--green-700); text-decoration: underline; }
 
 .btn {
   border: 1px solid transparent;
-  background: var(--green-600);
-  color: white;
+  background: var(--green-700);
+  color: #fff;
   padding: 10px 16px;
   border-radius: 8px;
   cursor: pointer;
-  transition: background .15s ease, color .15s ease, border-color .15s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  transition: background .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
-.btn:hover { background: var(--green-700); }
+.btn:hover { background: #0f8a43; box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
 .btn:focus { outline: 2px solid var(--green-500); outline-offset: 2px; }
 
 .btn--outline {
-  background: white;
+  background: #ffffff;
   color: var(--green-700);
-  border-color: var(--green-600);
+  border-color: var(--green-700);
 }
 .btn--outline:hover { background: var(--green-50); }
 
@@ -155,9 +157,10 @@
 }
 .btn--primary { background: var(--green-600); }
 
+.page { background: var(--green-50); color: #000; }
 .hero {
-  background: linear-gradient(180deg, var(--green-50), white 80%);
-  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #dcfce7, #f0fdf4 60%, #ffffff 100%);
+  border-bottom: 1px solid var(--green-100);
 }
 .hero__inner {
   padding: 56px 0 64px;
@@ -166,21 +169,21 @@
 .hero__title {
   font-size: 36px;
   line-height: 1.2;
-  color: var(--text-900);
+  color: #000;
   margin: 0 0 12px 0;
 }
 .hero__subtitle {
-  color: var(--muted);
+  color: #000;
   max-width: 680px;
 }
 .hero__actions { display: flex; gap: 12px; margin-top: 20px; }
 
 .content { padding: 28px 0 56px; }
 
-.section { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.section { background: #ffffff; border: 1px solid var(--green-100); border-radius: 12px; padding: 16px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
 .section + .section { margin-top: 20px; }
 .section__header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.section__title { margin: 0; font-size: 20px; }
+.section__title { margin: 0; font-size: 20px; color: #0f172a; }
 .section__more { color: var(--green-700); text-decoration: none; }
 
 .card-grid {
@@ -189,9 +192,10 @@
   gap: 16px;
 }
 .card-placeholder {
-  background: #e5e7eb;
+  background: var(--green-100);
   border-radius: 12px;
   height: 160px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
 .two-col {
@@ -200,17 +204,17 @@
   gap: 20px;
   margin-top: 20px;
 }
-.panel { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.panel { background: #ffffff; border: 1px solid var(--green-100); border-radius: 12px; padding: 16px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
 .panel__title { margin: 0 0 12px 0; font-size: 18px; }
 
 .list-placeholder { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
-.list-placeholder li { height: 12px; background: #e5e7eb; border-radius: 6px; }
+.list-placeholder li { height: 12px; background: var(--green-100); border-radius: 6px; }
 
 .explore__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.map-card { background: var(--green-50); border: 1px dashed var(--green-100); border-radius: 12px; padding: 24px; display: grid; place-content: center; gap: 12px; text-align: center; }
+.map-card { background: #eafff1; border: 1px dashed var(--green-600); border-radius: 12px; padding: 24px; display: grid; place-content: center; gap: 12px; text-align: center; box-shadow: 0 3px 10px rgba(0,0,0,0.06); }
 .map-card__icon { font-size: 40px; }
 
-.footer { border-top: 1px solid var(--border); padding: 20px 0; color: var(--muted); font-size: 14px; }
+.footer { border-top: 1px solid var(--green-100); padding: 20px 0; color: #2f4d3b; font-size: 14px; }
 
 @media (min-width: 768px) {
   .nav { display: flex; }

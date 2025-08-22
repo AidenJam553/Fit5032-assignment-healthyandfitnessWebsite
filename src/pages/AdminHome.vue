@@ -24,15 +24,15 @@
         <section class="panel panel--menu">
           <h3>Manage Dashboard</h3>
           <ul>
-            <li>Users</li>
-            <li>Courses</li>
-            <li>Posts</li>
-            <li>Bookings</li>
-            <li>Email Centre</li>
-            <li>Maps/POI</li>
-            <li>Tables</li>
-            <li>System/Settings</li>
-            <li>Audit Logs</li>
+            <li><router-link to="/admin/users">Users</router-link></li>
+            <li><router-link to="/admin/courses">Courses</router-link></li>
+            <li><router-link to="/admin/posts">Posts</router-link></li>
+            <li><router-link to="/admin/bookings">Bookings</router-link></li>
+            <li><router-link to="/admin/email-centre">Email Centre</router-link></li>
+            <li><router-link to="/admin/maps-poi">Maps/POI</router-link></li>
+            <li><router-link to="/admin/tables">Tables</router-link></li>
+            <li><router-link to="/admin/system-settings">System/Settings</router-link></li>
+            <li><router-link to="/admin/audit-logs">Audit Logs</router-link></li>
           </ul>
         </section>
 
@@ -106,6 +106,8 @@
 .panel { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
 .panel h3 { margin: 0 0 10px 0; }
 .panel--menu ul { margin: 0; padding-left: 20px; color: var(--muted); }
+.panel--menu a { color: var(--green-700); text-decoration: none; }
+.panel--menu a:hover { text-decoration: underline; }
 
 .stat .placeholder { height: 140px; background: #eef2f7; border-radius: 10px; }
 .bars { display: grid; grid-auto-flow: column; align-items: end; gap: 8px; height: 140px; padding: 8px; background: #eef2f7; border-radius: 10px; }
