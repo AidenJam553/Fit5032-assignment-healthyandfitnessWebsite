@@ -8,7 +8,7 @@
       <div class="container admin__bar-inner">
         <div class="logo">LOGO</div>
         <div class="admin__actions">
-          <button class="btn btn--ghost">Log out</button>
+          <button class="btn btn--outline">Log out</button>
           <div class="chip">
             <span class="chip__avatar">A</span>
             <span>Admin</span>
@@ -89,21 +89,21 @@
 }
 .container { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
 
-.admin__bar { background: white; border-bottom: 1px solid var(--border); }
+.admin__bar { background: #fff; border-bottom: 1px solid var(--gray-200); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(6px); }
 .admin__bar-inner { height: 64px; display: flex; align-items: center; justify-content: space-between; }
-.logo { font-weight: 800; color: var(--green-700); }
+.logo { font-weight: 800; color: var(--green-800); }
 .admin__actions { display: flex; align-items: center; gap: 12px; }
 
-.btn { border: 1px solid var(--green-600); background: white; color: var(--green-700); padding: 8px 12px; border-radius: 8px; }
-.btn:hover { background: var(--green-50); }
-.chip { display: inline-flex; align-items: center; gap: 8px; background: var(--green-50); color: var(--green-700); border: 1px solid var(--green-600); padding: 6px 10px; border-radius: 999px; }
+.btn { border: 1px solid var(--green-700); background: #fff; color: var(--green-800); padding: 8px 12px; border-radius: 8px; box-shadow: var(--shadow-sm); }
+.btn:hover { background: var(--green-50); box-shadow: var(--shadow-md); }
+.chip { display: inline-flex; align-items: center; gap: 8px; background: var(--green-50); color: var(--green-800); border: 1px solid var(--green-200); padding: 6px 10px; border-radius: 999px; box-shadow: var(--shadow-sm); }
 .chip__avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--green-600); color: white; display: grid; place-content: center; font-weight: 700; }
 
 .admin__content { padding: 24px 0 40px; }
 .greeting { margin: 0 0 16px 0; }
 
 .grid { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 18px; }
-.panel { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.panel { background: #fff; border: 1px solid var(--green-100); border-radius: 12px; padding: 16px; box-shadow: var(--shadow-md); }
 .panel h3 { margin: 0 0 10px 0; }
 .panel--menu ul { margin: 0; padding-left: 20px; color: var(--muted); }
 .panel--menu a { color: var(--green-700); text-decoration: none; }

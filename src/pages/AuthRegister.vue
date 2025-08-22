@@ -103,11 +103,11 @@ onMounted(() => { loadGisAndRender() })
   --green-50: #f0fdf4;
   --border: #e2e8f0;
 }
-.auth { min-height: 100vh; display: grid; place-content: center; background: linear-gradient(180deg, var(--green-50), #fff 80%); padding: 20px; }
-.card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 20px; width: 340px; }
+.auth { min-height: 100vh; display: grid; place-content: center; padding: 20px; }
+.card { background: #fff; border: 1px solid var(--green-100); border-radius: 12px; padding: 20px; width: 360px; box-shadow: var(--shadow-lg); }
 .form { display: grid; gap: 10px; margin-bottom: 10px; }
 label { color: #334155; font-size: 14px; }
-input { border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+input { border: 1px solid var(--gray-200); border-radius: 8px; padding: 10px; }
 .btn { border: 1px solid var(--green-600); border-radius: 8px; padding: 10px 14px; cursor: pointer; }
 .btn--primary { background: var(--green-600); color: #fff; }
 .btn--ghost { margin-top: 8px; background: #fff; color: var(--green-700); }
