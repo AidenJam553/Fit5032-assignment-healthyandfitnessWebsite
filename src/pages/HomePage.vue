@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+import SiteHeader from '@/components/SiteHeader.vue'
 
 const overlayOpacity = ref(0)
 
@@ -21,19 +22,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="page">
-    <header class="topbar">
-      <div class="container topbar__inner">
-        <div class="logo">LOGO</div>
-        <nav class="nav">
-          <a href="#" class="nav__link active">Home</a>
-          <a href="#" class="nav__link">Forum</a>
-          <a href="#" class="nav__link">Learn</a>
-          <a href="#" class="nav__link">Record</a>
-          <a href="#" class="nav__link">About</a>
-        </nav>
-        <button class="btn btn--outline">Log In</button>
-      </div>
-    </header>
+    <SiteHeader />
 
     <section class="hero">
       <div class="container hero__inner">
@@ -130,10 +119,14 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   height: 64px;
 }
-.logo {
-  font-weight: 800;
-  font-size: 20px;
-  color: #0f172a;
+.logo { display: flex; align-items: center; gap: 12px; }
+.logo__img { height: 36px; width: auto; display: block; }
+.brand__text {
+  font-family: 'Dancing Script', cursive;
+  font-size: 24px;
+  font-style: italic;
+  color: #15803d;
+  letter-spacing: .3px;
 }
 .nav {
   display: none;

@@ -63,6 +63,7 @@ onMounted(() => { loadGisAndRender() })
 <template>
   <div class="auth">
     <div class="card">
+      <router-link to="/" class="back-home">← Back to Home</router-link>
       <h1>Log in</h1>
       <form @submit.prevent="onSubmit" class="form">
         <label>Email</label>
@@ -99,6 +100,8 @@ input { border: 1px solid var(--gray-200); border-radius: 8px; padding: 10px; }
 .btn--ghost:hover { background: var(--green-50); }
 .hint { font-size: 13px; color: #64748b; }
 .error { color: #b91c1c; margin-top: 8px; }
+.back-home { display: inline-block; margin-bottom: 8px; color: var(--green-800); text-decoration: none; }
+.back-home:hover { text-decoration: underline; }
 </style>
 
 <!-- Google Identity Services -->
