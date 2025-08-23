@@ -116,6 +116,33 @@ export const useForumStore = defineStore('forum', {
       post.replies = post.replyCount
       save(this.posts)
     },
+    deletePost(postId) {
+      const index = this.posts.findIndex(p => p.id === postId)
+      if (index > -1) {
+        this.posts.splice(index, 1)
+        save(this.posts)
+        return true
+      }
+      return false
+    },
+    editPost(postId, updates) {
+      const post = this.getById(postId)
+      if (!post) return false
+      
+      // Only allow editing certain fields
+      const allowedFields = ['title', 'content', 'topic', 'images']
+      allowedFields.forEach(field => {
+        if (updates[field] !== undefined) {
+          post[field] = updates[field]
+        }
+      })
+      
+      // Add edited timestamp
+      post.editedAt = new Date().toISOString()
+      
+      save(this.posts)
+      return true
+    },
     getById(id) { return this.posts.find(p => p.id === id) },
     setTopic(topic) { this.activeTopic = topic || 'All' },
   }
