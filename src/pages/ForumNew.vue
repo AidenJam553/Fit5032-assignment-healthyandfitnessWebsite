@@ -1,12 +1,13 @@
 <script setup>
 import SiteHeader from '@/components/SiteHeader.vue'
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useForumStore } from '@/lib/stores/forum'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { getCurrentUser } from '@/lib/auth'
 
 const store = useForumStore()
 const router = useRouter()
+const route = useRoute()
 const user = ref(getCurrentUser())
 const title = ref('')
 const content = ref('')
@@ -14,6 +15,16 @@ const topic = ref('General')
 const error = ref('')
 const images = ref([])
 const isUploading = ref(false)
+const isLoaded = ref(false)
+const showContent = ref(false)
+
+// Edit mode
+const isEditMode = ref(false)
+const editingPostId = ref(null)
+
+// Success state
+const showSuccess = ref(false)
+const countdown = ref(5)
 
 // Update user data
 function updateUser() {
@@ -46,6 +57,11 @@ const userAvatar = computed(() => {
 
 const userInitials = computed(() => {
   return (authorName.value || 'A')[0]?.toUpperCase() || 'A'
+})
+
+// Computed property for button disabled state
+const isSubmitDisabled = computed(() => {
+  return !title.value?.trim() || !content.value?.trim() || isUploading.value
 })
 
 function handleImageUpload(event) {
@@ -92,7 +108,47 @@ function removeImage(imageId) {
   images.value = images.value.filter(img => img.id !== imageId)
 }
 
-function submit() {
+function handleSubmitClick(event) {
+  console.log('=== BUTTON CLICKED ===')
+  console.log('Event:', event)
+  console.log('Event type:', event.type)
+  console.log('Target:', event.target)
+  
+  // Add navigation monitoring
+  window.addEventListener('beforeunload', () => {
+    console.log('Page is about to unload!')
+  })
+  
+  window.addEventListener('unload', () => {
+    console.log('Page is unloading!')
+  })
+  
+  // Monitor for router navigation
+  const originalPush = router.push
+  const originalReplace = router.replace
+  
+  router.push = function(...args) {
+    console.log('Router push called with:', args)
+    return originalPush.apply(this, args)
+  }
+  
+  router.replace = function(...args) {
+    console.log('Router replace called with:', args)
+    return originalReplace.apply(this, args)
+  }
+  
+  // Call submit function
+  submit()
+}
+
+async function submit() {
+  console.log('=== SUBMIT FUNCTION CALLED ===')
+  console.log('isEditMode:', isEditMode.value)
+  console.log('editingPostId:', editingPostId.value)
+  console.log('isSubmitDisabled:', isSubmitDisabled.value)
+  console.log('title.value:', title.value)
+  console.log('content.value length:', content.value?.length)
+  
   error.value = ''
   
   if (!title.value || title.value.length < 4) { 
@@ -105,31 +161,164 @@ function submit() {
     return 
   }
   
-  // Create post with images
-  const postData = {
-    author: authorName.value,
-    title: title.value,
-    content: content.value,
-    topic: topic.value,
-    images: images.value.map(img => ({
-      id: img.id,
-      dataUrl: img.dataUrl,
-      name: img.name
-    }))
-  }
-  
-  const post = store.create(postData)
+  if (isEditMode.value) {
+    console.log('Entering edit mode branch')
+    
+    // Prevent any form submission or page reload
+    window.addEventListener('beforeunload', (e) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }, { once: true })
+    
+    // Update existing post
+    const updates = {
+      title: title.value,
+      content: content.value,
+      topic: topic.value,
+      images: images.value.map(img => ({
+        id: img.id,
+        dataUrl: img.dataUrl,
+        name: img.name
+      }))
+    }
+    
+    console.log('Calling store.editPost with:', editingPostId.value, updates)
+    const success = store.editPost(editingPostId.value, updates)
+    console.log('Edit result:', success)
+    
+    if (success) {
+      console.log('Setting showSuccess to true')
+      
+      // Try multiple approaches to set showSuccess
+      showSuccess.value = true
+      console.log('showSuccess immediately after setting:', showSuccess.value)
+      
+      // Force trigger reactive update
+      await nextTick()
+      console.log('showSuccess after nextTick:', showSuccess.value)
+      
+      // Try setting again after nextTick
+      showSuccess.value = true
+      console.log('showSuccess after setting again:', showSuccess.value)
+      
+      // Force another update cycle
+      await nextTick()
+      console.log('showSuccess after second nextTick:', showSuccess.value)
+      
+      console.log('DOM showSuccess check:', document.querySelector('.success-container'))
+      
+      // Remove the beforeunload listener
+      window.removeEventListener('beforeunload', () => {})
+      
+      // Start countdown after ensuring DOM is updated
+      setTimeout(() => {
+        console.log('Starting countdown, showSuccess is:', showSuccess.value)
+        startCountdown()
+      }, 200)
+      
+      // Also set a backup timer to check showSuccess value
+      setTimeout(() => {
+        console.log('Backup check - showSuccess is:', showSuccess.value)
+        if (!showSuccess.value) {
+          console.log('showSuccess was reset! Setting it again.')
+          showSuccess.value = true
+        }
+      }, 500)
+    } else {
+      console.log('Edit failed')
+      error.value = 'Failed to update post'
+    }
+  } else {
+    // Create new post
+    const postData = {
+      author: authorName.value,
+      title: title.value,
+      content: content.value,
+      topic: topic.value,
+      images: images.value.map(img => ({
+        id: img.id,
+        dataUrl: img.dataUrl,
+        name: img.name
+      }))
+    }
+    
+    const post = store.create(postData)
   router.push({ name: 'forum-detail', params: { id: post.id } })
+}
 }
 
 function cancel() {
   router.push('/forum')
 }
 
+// Success page functions
+function startCountdown() {
+  console.log('Starting countdown')
+  countdown.value = 5
+  const timer = setInterval(() => {
+    countdown.value--
+    console.log('Countdown:', countdown.value)
+    if (countdown.value <= 0) {
+      clearInterval(timer)
+      navigateToPost()
+    }
+  }, 1000)
+}
+
+function navigateToPost() {
+  router.replace({ name: 'forum-detail', params: { id: editingPostId.value } })
+}
+
 // Listen for user data changes
-onMounted(() => {
+onMounted(async () => {
   updateUser()
   window.addEventListener('storage', updateUser)
+  
+  // Watch showSuccess changes
+  watch(showSuccess, (newVal, oldVal) => {
+    console.log('showSuccess changed from', oldVal, 'to', newVal)
+    console.log('Current DOM state:', document.querySelector('.success-container'))
+  }, { immediate: true })
+  
+  // Initialize store data first
+  store.seedIfEmpty()
+  
+  // Check if we're in edit mode
+  const editId = route.query.edit
+  
+  if (editId) {
+    const post = store.getById(editId)
+    
+    if (post) {
+      // Check if user owns this post
+      const currentUser = getCurrentUser()
+      const ownsPost = currentUser && (post.author === currentUser.username || post.author === currentUser.email)
+      
+      if (ownsPost) {
+        isEditMode.value = true
+        editingPostId.value = editId
+        title.value = post.title
+        content.value = post.content
+        topic.value = post.topic
+        images.value = post.images || []
+      } else {
+        // Redirect if user doesn't own the post
+        router.push('/forum')
+      }
+    } else {
+      // Redirect if post not found
+      router.push('/forum')
+    }
+  }
+  
+  // Trigger animations
+  await nextTick()
+  setTimeout(() => {
+    isLoaded.value = true
+  }, 100)
+  setTimeout(() => {
+    showContent.value = true
+  }, 300)
 })
 
 onBeforeUnmount(() => {
@@ -142,21 +331,70 @@ onBeforeUnmount(() => {
     <SiteHeader />
     
     <div class="main-container">
-      <div class="compose-container">
-        <div class="header">
-          <button class="back-btn" @click="cancel">
+      <!-- Debug info -->
+      <div style="position: fixed; top: 10px; right: 10px; background: red; color: white; padding: 10px; z-index: 9999; font-size: 11px; max-width: 300px;">
+        <div :style="{background: showSuccess ? 'green' : 'red', padding: '2px'}">showSuccess: {{ showSuccess }}</div>
+        isEditMode: {{ isEditMode }}<br>
+        editingPostId: {{ editingPostId }}<br>
+        title: "{{ title?.substring(0, 20) }}..."<br>
+        content length: {{ content?.length || 0 }}<br>
+        isUploading: {{ isUploading }}<br>
+        Button disabled: {{ isSubmitDisabled }}<br>
+        <button @click="showSuccess = true" style="margin-top: 5px; color: black; font-size: 10px;">Test Success</button>
+        <button @click="submit" style="margin-top: 5px; color: black; font-size: 10px;">Force Submit</button>
+        <button @click="showSuccess = false" style="margin-top: 5px; color: black; font-size: 10px;">Reset</button>
+      </div>
+      
+      <!-- Success Message -->
+      <div v-show="showSuccess" class="success-container animate-fade-up animate-in" style="background: rgba(0,255,0,0.1); border: 2px solid green;">
+        <div class="success-content">
+          <div class="success-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22,4 12,14.01 9,11.01"/>
+            </svg>
+          </div>
+          <h1 class="success-title">Post Updated Successfully!</h1>
+          <p class="success-message">Your post has been updated and saved successfully.</p>
+          
+          <div class="success-actions">
+            <button class="btn btn-primary" @click="navigateToPost">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 11l3 3 8-8"/>
+              </svg>
+              View Updated Post
+            </button>
+          </div>
+          
+          <div class="auto-redirect">
+            <p>Automatically redirecting in {{ countdown }} seconds...</p>
+            <div class="countdown-bar">
+              <div class="countdown-progress" :style="{ width: (countdown / 5) * 100 + '%' }"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit/Create Form -->
+      <div v-show="!showSuccess" class="compose-container animate-fade-up" :class="{ 'animate-in': isLoaded }">
+        <div class="header animate-slide-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 0.1s">
+          <button class="back-btn animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.0s" @click="cancel">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
             Back to Forum
           </button>
-          <h1 class="title">Create New Post</h1>
-          <p class="subtitle">Share your thoughts with the community</p>
+          <h1 class="title animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.2s">
+            {{ isEditMode ? 'Edit Post' : 'Create New Post' }}
+          </h1>
+          <p class="subtitle animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.3s">
+            {{ isEditMode ? 'Update your post content' : 'Share your thoughts with the community' }}
+          </p>
         </div>
 
-        <div class="form-panel">
+        <div class="form-panel animate-slide-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 0.3s">
           <!-- Author Info -->
-          <div class="author-section">
+          <div class="author-section animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.4s">
             <div class="author-avatar">
               <img v-if="userAvatar" :src="userAvatar" alt="User Avatar" class="avatar-img" />
               <span v-else class="avatar-initials">{{ userInitials }}</span>
@@ -168,7 +406,7 @@ onBeforeUnmount(() => {
           </div>
 
           <!-- Form Fields -->
-          <div class="form-group">
+          <div class="form-group animate-slide-left" :class="{ 'animate-in': showContent }" style="animation-delay: 0.5s">
             <label class="form-label">Post Title</label>
             <input 
               v-model="title" 
@@ -179,7 +417,7 @@ onBeforeUnmount(() => {
             <div class="char-count">{{ title.length }}/100</div>
           </div>
 
-          <div class="form-group">
+          <div class="form-group animate-slide-right" :class="{ 'animate-in': showContent }" style="animation-delay: 0.6s">
             <label class="form-label">Category</label>
             <select v-model="topic" class="form-select">
               <option value="General">💬 General Discussion</option>
@@ -190,7 +428,7 @@ onBeforeUnmount(() => {
         </select>
           </div>
 
-          <div class="form-group">
+          <div class="form-group animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.7s">
             <label class="form-label">Content</label>
             <textarea 
               v-model="content" 
@@ -203,7 +441,7 @@ onBeforeUnmount(() => {
           </div>
 
           <!-- Image Upload Section -->
-          <div class="form-group">
+          <div class="form-group animate-slide-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.8s">
             <label class="form-label">Images (Optional)</label>
             <div class="image-upload-area">
               <input 
@@ -263,14 +501,15 @@ onBeforeUnmount(() => {
           </div>
 
           <!-- Action Buttons -->
-          <div class="action-buttons">
+          <div class="action-buttons animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.9s">
             <button class="btn btn-secondary" @click="cancel" type="button">
               Cancel
             </button>
             <button 
               class="btn btn-primary" 
-              @click="submit"
-              :disabled="!title.trim() || !content.trim() || isUploading"
+              @click.stop.prevent="handleSubmitClick"
+              type="button"
+              style="opacity: 1 !important; pointer-events: auto !important;"
             >
               <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 19l7-7 3 3-7 7-3-3z"/>
@@ -278,7 +517,7 @@ onBeforeUnmount(() => {
                 <path d="M2 2l7.586 7.586"/>
                 <circle cx="11" cy="11" r="2"/>
               </svg>
-              Publish Post
+              {{ isEditMode ? 'Update Post' : 'Publish Post' }}
             </button>
           </div>
         </div>
@@ -303,8 +542,21 @@ onBeforeUnmount(() => {
 
 /* Base Styles */
 .page {
-  background: var(--secondary-color);
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.page::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 300px;
+  background: radial-gradient(ellipse at top, rgba(34, 197, 94, 0.1) 0%, transparent 60%);
+  pointer-events: none;
 }
 
 .main-container {
@@ -328,20 +580,25 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: none;
-  border: none;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--border-color);
   color: var(--text-secondary);
   font-size: 14px;
   cursor: pointer;
-  padding: 8px 12px;
+  transition: all 0.3s ease;
+  padding: 8px 16px;
   border-radius: 8px;
-  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   margin-bottom: 24px;
 }
 
 .back-btn:hover {
-  background: white;
-  color: var(--text-primary);
+  color: var(--primary-color);
+  background: rgba(34, 197, 94, 0.1);
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(34, 197, 94, 0.15);
 }
 
 .back-btn svg {
@@ -680,19 +937,21 @@ onBeforeUnmount(() => {
 }
 
 .btn-primary {
-  background: var(--primary-color);
-  color: white;
+  background: #22c55e !important;
+  color: white !important;
+  border: none !important;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%);
+  background: #16a34a !important;
+  color: white !important;
   transform: translateY(-3px);
   box-shadow: 0 12px 28px rgba(34, 197, 94, 0.4);
 }
 
 .btn-primary:disabled {
-  background: #d1d5db;
-  color: #9ca3af;
+  background: #94a3b8;
+  color: #e2e8f0;
   cursor: not-allowed;
   transform: none;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -744,4 +1003,213 @@ onBeforeUnmount(() => {
     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   }
 }
+
+/* Animation Keyframes */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Animation Classes */
+.animate-fade-up {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-up {
+  opacity: 0;
+  transform: translateY(50px);
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-left {
+  opacity: 0;
+  transform: translateX(-30px);
+  transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-right {
+  opacity: 0;
+  transform: translateX(30px);
+  transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-in {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+
+/* Success Page Styles */
+.success-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 40px 20px;
+}
+
+.success-content {
+  text-align: center;
+  max-width: 500px;
+  background: var(--bg-primary);
+  border-radius: 20px;
+  padding: 48px 40px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color);
+}
+
+.success-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px;
+  background: linear-gradient(135deg, var(--primary-color), #16a34a);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: successPulse 2s ease-in-out infinite alternate;
+}
+
+.success-icon svg {
+  width: 40px;
+  height: 40px;
+  color: white;
+  stroke-width: 3;
+}
+
+.success-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  letter-spacing: -0.5px;
+}
+
+.success-message {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+  line-height: 1.6;
+}
+
+.success-actions {
+  margin-bottom: 32px;
+}
+
+.success-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.success-actions .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(34, 197, 94, 0.3);
+}
+
+.auto-redirect {
+  padding-top: 24px;
+  border-top: 1px solid var(--border-color);
+}
+
+.auto-redirect p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.countdown-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-secondary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.countdown-progress {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color), #16a34a);
+  border-radius: 2px;
+  transition: width 1s ease-in-out;
+}
+
+@keyframes successPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+  }
+  100% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 20px rgba(34, 197, 94, 0);
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .success-content {
+    padding: 32px 24px;
+    margin: 0 16px;
+  }
+  
+  .success-title {
+    font-size: 24px;
+  }
+  
+  .success-icon {
+    width: 64px;
+    height: 64px;
+  }
+  
+  .success-icon svg {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+
 </style>
