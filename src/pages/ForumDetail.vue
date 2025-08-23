@@ -248,6 +248,60 @@ function handleComment() {
   localStorage.setItem(commentsKey, JSON.stringify(comments.value))
 }
 
+// Check if comment belongs to current user
+function isOwnComment(commentItem) {
+  if (!user.value) return false
+  return commentItem.author === user.value.username || commentItem.author === user.value.email
+}
+
+// Edit comment
+function editComment(commentItem) {
+  commentItem.isEditing = true
+  commentItem.editContent = commentItem.content
+}
+
+// Cancel edit
+function cancelEdit(commentItem) {
+  commentItem.isEditing = false
+  delete commentItem.editContent
+}
+
+// Save edited comment
+function saveComment(commentItem) {
+  if (!commentItem.editContent?.trim()) return
+  
+  commentItem.content = commentItem.editContent.trim()
+  commentItem.editedAt = new Date().toISOString()
+  commentItem.isEditing = false
+  delete commentItem.editContent
+  
+  // Save to localStorage
+  const commentsKey = `comments_${post.value.id}`
+  localStorage.setItem(commentsKey, JSON.stringify(comments.value))
+}
+
+// Delete comment
+function deleteComment(commentItem) {
+  if (confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
+    const index = comments.value.findIndex(c => c.id === commentItem.id)
+    if (index > -1) {
+      comments.value.splice(index, 1)
+      
+      // Update post reply count
+      if (post.value.replyCount > 0) {
+        post.value.replyCount -= 1
+        post.value.replies = post.value.replyCount
+        store.posts.find(p => p.id === post.value.id).replyCount = post.value.replyCount
+        store.posts.find(p => p.id === post.value.id).replies = post.value.replyCount
+      }
+      
+      // Save to localStorage
+      const commentsKey = `comments_${post.value.id}`
+      localStorage.setItem(commentsKey, JSON.stringify(comments.value))
+    }
+  }
+}
+
 // Load comments and bookmark status
 onMounted(async () => {
   // Load comments
@@ -485,10 +539,47 @@ function getTopicEmoji(topic) {
               </div>
               <div class="comment-content">
                 <div class="comment-header">
-                  <span class="comment-author">{{ commentItem.author }}</span>
-                  <span class="comment-date">{{ formatDate(commentItem.createdAt) }}</span>
+                  <div class="comment-info">
+                    <span class="comment-author">{{ commentItem.author }}</span>
+                    <span class="comment-date">
+                      {{ formatDate(commentItem.createdAt) }}
+                      <span v-if="commentItem.editedAt" class="edited-indicator"> • edited</span>
+                    </span>
+                  </div>
+                  <!-- Edit/Delete buttons for own comments -->
+                  <div v-if="isOwnComment(commentItem)" class="comment-controls">
+                    <button class="control-btn edit-btn" @click="editComment(commentItem)" title="Edit Comment">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                    <button class="control-btn delete-btn" @click="deleteComment(commentItem)" title="Delete Comment">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3,6 5,6 21,6"/>
+                        <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/>
+                        <line x1="10" y1="11" x2="10" y2="17"/>
+                        <line x1="14" y1="11" x2="14" y2="17"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-                <p class="comment-text">{{ commentItem.content }}</p>
+                <p v-if="!commentItem.isEditing" class="comment-text">{{ commentItem.content }}</p>
+                <!-- Edit comment form -->
+                <div v-else class="edit-comment-form">
+                  <textarea
+                    v-model="commentItem.editContent"
+                    class="edit-comment-input"
+                    rows="3"
+                    placeholder="Edit your comment..."
+                    @keydown.ctrl.enter="saveComment(commentItem)"
+                    @keydown.esc="cancelEdit(commentItem)"
+                  ></textarea>
+                  <div class="edit-comment-actions">
+                    <button class="btn-save" @click="saveComment(commentItem)">Save</button>
+                    <button class="btn-cancel" @click="cancelEdit(commentItem)">Cancel</button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1259,8 +1350,26 @@ function getTopicEmoji(topic) {
 .comment-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
   margin-bottom: 8px;
+}
+
+.comment-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.comment-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.comment-item:hover .comment-controls {
+  opacity: 1;
 }
 
 .comment-author {
@@ -1814,6 +1923,120 @@ function getTopicEmoji(topic) {
   .image-info {
     padding: 12px 16px;
   }
+}
+
+/* Comment edit/delete controls */
+.control-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.control-btn svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2;
+}
+
+.control-btn.edit-btn {
+  color: #0ea5e9;
+}
+
+.control-btn.edit-btn:hover {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0369a1;
+  transform: scale(1.05);
+}
+
+.control-btn.delete-btn {
+  color: #ef4444;
+}
+
+.control-btn.delete-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  transform: scale(1.05);
+}
+
+/* Comment edit form */
+.edit-comment-form {
+  margin-top: 8px;
+}
+
+.edit-comment-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  resize: vertical;
+  min-height: 60px;
+  transition: border-color 0.2s ease;
+}
+
+.edit-comment-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+.edit-comment-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-save {
+  padding: 6px 12px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-save:hover {
+  background: #16a34a;
+  transform: translateY(-1px);
+}
+
+.btn-cancel {
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.edited-indicator {
+  color: #6b7280;
+  font-style: italic;
+  font-size: 11px;
 }
 </style>
 

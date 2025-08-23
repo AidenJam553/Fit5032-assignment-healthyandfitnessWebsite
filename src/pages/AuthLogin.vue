@@ -145,9 +145,9 @@ onMounted(async () => {
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
               </svg>
               <input v-model="password" type="password" required class="form-input" placeholder="Enter your password" />
-            </div>
-          </div>
-
+    </div>
+  </div>
+  
           <button class="btn-login animate-fade-up" :class="{ 'animate-in': showContent, 'loading': loading }" style="animation-delay: 0.6s" :disabled="loading">
             <span v-if="!loading">Sign In</span>
             <div v-else class="loading-spinner"></div>
