@@ -2,6 +2,10 @@ import express from 'express'
 import cors from 'cors'
 import bodyParser from 'body-parser'
 import { OAuth2Client } from 'google-auth-library'
+import dotenv from 'dotenv'
+
+// Load environment variables
+dotenv.config()
 
 const app = express()
 app.use(cors())
