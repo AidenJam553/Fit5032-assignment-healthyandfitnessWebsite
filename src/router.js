@@ -10,7 +10,8 @@ const LessonDetail = () => import('./pages/LessonDetail.vue')
 const ForumNew = () => import('./pages/ForumNew.vue')
 const ForumDetail = () => import('./pages/ForumDetail.vue')
 const Explore = () => import('./pages/Explore.vue')
-const Profile = () => import('./pages/Profile.vue')
+const ProfileInfo = () => import('./pages/ProfileInfo.vue')
+const ProfileEdit = () => import('./pages/Profile.vue')
 import AdminHome from './pages/AdminHome.vue'
 import AuthLogin from './pages/AuthLogin.vue'
 import AuthRegister from './pages/AuthRegister.vue'
@@ -35,7 +36,8 @@ const routes = [
   { path: '/learn/:id', name: 'lesson-detail', component: LessonDetail },
   { path: '/record', name: 'record', component: Record },
   { path: '/explore', name: 'explore', component: Explore },
-  { path: '/profile', name: 'profile', component: Profile },
+  { path: '/profile', name: 'profile', component: ProfileInfo },
+  { path: '/profile/edit', name: 'profile-edit', component: ProfileEdit },
   { path: '/about', name: 'about', component: About },
   { path: '/login', name: 'login', component: AuthLogin },
   { path: '/register', name: 'register', component: AuthRegister },
