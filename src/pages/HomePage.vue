@@ -182,15 +182,24 @@ onBeforeUnmount(() => {
   padding: 56px 0 64px;
   text-align: left;
 }
+@media (min-width: 992px) {
+  .hero__inner { transform: translate(-3cm, -1.5cm); }
+}
 .hero__title {
-  font-size: 36px;
-  line-height: 1.2;
-  color: #000;
-  margin: 0 0 12px 0;
+  font-family: 'Manrope', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  font-size: 44px;
+  line-height: 1.3;
+  color: #0b1220;
+  letter-spacing: .2px;
+  font-weight: 800;
+  margin: 0 0 14px 0;
 }
 .hero__subtitle {
-  color: #000;
-  max-width: 680px;
+  font-family: 'Manrope', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  color: #0b1220;
+  max-width: 720px;
+  font-size: 18px;
+  line-height: 1.85;
 }
 .hero__actions { display: flex; gap: 12px; margin-top: 20px; }
 
@@ -246,7 +255,7 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 767px) {
-  .hero__title { font-size: 28px; }
+  .hero__title { font-size: 32px; line-height: 1.35; }
   .card-grid { grid-template-columns: 1fr; }
   .two-col { grid-template-columns: 1fr; }
   .explore__grid { grid-template-columns: 1fr; }

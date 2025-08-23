@@ -1,5 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomePage from './pages/HomePage.vue'
+// Public pages
+const Forum = () => import('./pages/Forum.vue')
+const Learn = () => import('./pages/Learn.vue')
+const Record = () => import('./pages/Record.vue')
+const About = () => import('./pages/About.vue')
 import AdminHome from './pages/AdminHome.vue'
 import AuthLogin from './pages/AuthLogin.vue'
 import AuthRegister from './pages/AuthRegister.vue'
@@ -17,6 +22,10 @@ const AdminAudits = () => import('./pages/admin/AdminAudits.vue')
 
 const routes = [
   { path: '/', name: 'home', component: HomePage },
+  { path: '/forum', name: 'forum', component: Forum },
+  { path: '/learn', name: 'learn', component: Learn },
+  { path: '/record', name: 'record', component: Record },
+  { path: '/about', name: 'about', component: About },
   { path: '/login', name: 'login', component: AuthLogin },
   { path: '/register', name: 'register', component: AuthRegister },
   { path: '/admin', name: 'admin-home', component: AdminHome },
