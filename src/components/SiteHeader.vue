@@ -1,3 +1,21 @@
+<script setup>
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { getCurrentUser } from '@/lib/auth'
+
+const user = ref(null)
+function updateUser() { user.value = getCurrentUser() }
+
+onMounted(() => {
+  updateUser()
+  window.addEventListener('storage', updateUser)
+})
+onBeforeUnmount(() => { window.removeEventListener('storage', updateUser) })
+
+function initialsFrom(u) {
+  const base = u?.username || u?.email || ''
+  return base.split('@')[0].split(/\s+/).map(s => s[0]).join('').slice(0,2).toUpperCase() || 'U'
+}
+</script>
 <template>
   <header class="site-topbar">
     <div class="container topbar__inner">
@@ -12,7 +30,11 @@
         <router-link class="nav__link" to="/record" active-class="active">Record</router-link>
         <router-link class="nav__link" to="/about" active-class="active">About</router-link>
       </nav>
-      <router-link class="btn btn--outline" to="/login">Log In</router-link>
+      <router-link v-if="!user" class="btn btn--outline" to="/login">Log In</router-link>
+      <router-link v-else class="profile-pill" to="/profile">
+        <span class="avatar">{{ initialsFrom(user) }}</span>
+        <span class="email">{{ user.username || user.email }}</span>
+      </router-link>
     </div>
   </header>
 </template>
@@ -38,6 +60,18 @@
 .btn.btn--outline:hover { background: var(--green-50); }
 
 @media (min-width: 768px) { .nav { display: flex; } }
+
+.profile-pill {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.25);
+  border: 1px solid rgba(255,255,255,0.35);
+  color: #fff; text-decoration: none;
+  padding: 8px 12px; border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.profile-pill:hover { background: rgba(255,255,255,0.35); }
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.85); color: #15803d; display: grid; place-content: center; font-weight: 800; }
+.email { color: #fff; font-weight: 600; }
 </style>
 
 

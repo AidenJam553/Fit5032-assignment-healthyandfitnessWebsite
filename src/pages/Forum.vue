@@ -1,5 +1,22 @@
 <script setup>
 import SiteHeader from '@/components/SiteHeader.vue'
+import { useForumStore } from '@/lib/stores/forum'
+import { getCurrentUser } from '@/lib/auth'
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+
+const forum = useForumStore()
+const router = useRouter()
+onMounted(() => forum.seedIfEmpty())
+
+function newPost() {
+  const user = getCurrentUser()
+  if (!user) {
+    router.push({ path: '/login', query: { redirect: '/forum/new' } })
+    return
+  }
+  router.push('/forum/new')
+}
 </script>
 
 <template>
@@ -20,25 +37,25 @@ import SiteHeader from '@/components/SiteHeader.vue'
           <div class="search">
             <input class="search__input" placeholder="Search posts..." />
           </div>
-          <button class="btn btn--primary">New Post</button>
+          <button class="btn btn--primary" @click="newPost">New Post</button>
         </div>
       </div>
     </section>
 
     <div class="container forum-grid">
       <main class="feed">
-        <article class="post">
+        <article class="post" v-for="p in (forum.activeTopic==='All' ? forum.posts : forum.posts.filter(pp => pp.topic === forum.activeTopic))" :key="p.id" @click="router.push({ name: 'forum-detail', params: { id: p.id } })" style="cursor:pointer">
           <div class="cover" aria-hidden="true"></div>
           <div class="post__body">
             <div class="post__meta">
-              <div class="avatar">JD</div>
+              <div class="avatar">{{ p.author.split(' ').map(s=>s[0]).join('').slice(0,2).toUpperCase() }}</div>
               <div class="who">
-                <strong>John Doe</strong>
-                <span class="muted">25 minutes ago · Nutrition</span>
+                <strong>{{ p.author }}</strong>
+                <span class="muted">{{ new Date(p.createdAt).toLocaleString() }} · {{ p.topic }}</span>
               </div>
             </div>
-            <h3 class="post__title">How do you stay consistent with cardio?</h3>
-            <p class="post__excerpt">Share routines, motivation tips, and playlist recommendations that help you keep going.</p>
+            <h3 class="post__title">{{ p.title }}</h3>
+            <p class="post__excerpt">{{ (p.content || '').slice(0,140) }}...</p>
             <div class="chips">
               <span class="chip">Cardio</span>
               <span class="chip">Motivation</span>
@@ -49,20 +66,21 @@ import SiteHeader from '@/components/SiteHeader.vue'
             </div>
           </div>
         </article>
-        <article class="post placeholder"></article>
-        <article class="post placeholder"></article>
-        <article class="post placeholder"></article>
       </main>
+      <div v-if="(forum.activeTopic==='All' ? forum.posts : forum.posts.filter(pp => pp.topic === forum.activeTopic)).length === 0" class="empty">
+        No posts yet under this category.
+      </div>
 
       <aside class="sidebar">
         <div class="panel">
           <h3 class="panel__title">Categories</h3>
           <ul class="cat-list">
-            <li><span class="dot"></span> General</li>
-            <li><span class="dot"></span> Nutrition</li>
-            <li><span class="dot"></span> Workout</li>
-            <li><span class="dot"></span> Weight loss</li>
-            <li><span class="dot"></span> Q & A</li>
+            <li :class="{active: forum.activeTopic==='All'}" @click="forum.setTopic('All')"><span class="dot"></span> All</li>
+            <li :class="{active: forum.activeTopic==='General'}" @click="forum.setTopic('General')"><span class="dot"></span> General</li>
+            <li :class="{active: forum.activeTopic==='Nutrition'}" @click="forum.setTopic('Nutrition')"><span class="dot"></span> Nutrition</li>
+            <li :class="{active: forum.activeTopic==='Workout'}" @click="forum.setTopic('Workout')"><span class="dot"></span> Workout</li>
+            <li :class="{active: forum.activeTopic==='Weight loss'}" @click="forum.setTopic('Weight loss')"><span class="dot"></span> Weight loss</li>
+            <li :class="{active: forum.activeTopic==='Q & A'}" @click="forum.setTopic('Q & A')"><span class="dot"></span> Q & A</li>
           </ul>
         </div>
         <div class="panel">
@@ -104,10 +122,11 @@ import SiteHeader from '@/components/SiteHeader.vue'
 
 .forum-grid { display: grid; grid-template-columns: 1fr 360px; gap: 28px; padding: 28px 0; }
 .feed { display: grid; grid-template-columns: 1fr; gap: 20px; }
-.post { background: #fff; border: 1px solid var(--green-100); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-md); }
+.post { background: #fff; border: 1px solid var(--green-100); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-md); min-height: 180px; display: flex; flex-direction: column; }
 .post.placeholder { height: 180px; background: var(--green-100); border: 0; box-shadow: var(--shadow-sm); }
-.cover { height: 160px; background: radial-gradient(260px 120px at 10% -20%, var(--green-50), #fff), linear-gradient(45deg, var(--green-200), var(--green-600)); opacity: .12; }
-.post__body { padding: 20px; }
+.cover { height: 110px; background: radial-gradient(260px 120px at 10% -20%, var(--green-50), #fff), linear-gradient(45deg, var(--green-200), var(--green-600)); opacity: .12; }
+.post.compact .cover { height: 80px; }
+.post__body { padding: 20px; display: flex; flex-direction: column; gap: 6px; }
 .post__meta { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
 .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--green-200); color: #0f172a; display: grid; place-content: center; font-weight: 700; box-shadow: inset 0 0 0 2px rgba(255,255,255,.8); }
 .avatar.small { width: 30px; height: 30px; font-size: 12px; }
@@ -115,24 +134,30 @@ import SiteHeader from '@/components/SiteHeader.vue'
 .muted { color: var(--gray-700); font-size: 13px; letter-spacing: .2px; margin-top: 6px; }
 .post__title { margin: 12px 0 8px 0; letter-spacing: .2px; }
 .post__excerpt { margin: 0 0 12px 0; color: var(--gray-700); line-height: 1.7; }
-.chips { display: flex; gap: 10px; margin-bottom: 12px; }
+.chips { display: flex; gap: 10px; margin-bottom: 12px; margin-top: 4px; }
 .chip { background: #fff; border: 1px solid var(--green-100); border-radius: 999px; padding: 6px 12px; font-size: 12px; }
 .stats { display: flex; gap: 20px; font-size: 12px; color: var(--gray-700); }
 
 .sidebar .panel { padding: 20px; }
 .panel__title { margin: 0 0 14px 0; font-size: 16px; }
 .cat-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.cat-list li { display: flex; align-items: center; gap: 10px; }
+.cat-list li { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 6px 8px; border-radius: 8px; }
+.cat-list li.active, .cat-list li:hover { background: var(--green-50); }
 .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--green-600); display: inline-block; }
 .user-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
 .user-row.placeholder { height: 36px; background: var(--green-100); border-radius: 10px; }
 
 .forum-footer { padding: 12px 0 40px; }
 .tip { background: #fff; border: 1px solid var(--green-100); border-radius: 14px; padding: 14px 18px; text-align: center; box-shadow: var(--shadow-sm); }
+.empty { color: var(--gray-700); padding: 24px 0; }
 
 @media (max-width: 960px) {
   .forum-grid { grid-template-columns: 1fr; gap: 20px; }
   .toolbar { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .cover { height: 90px; }
 }
 </style>
 
