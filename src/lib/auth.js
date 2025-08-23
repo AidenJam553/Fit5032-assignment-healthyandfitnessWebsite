@@ -81,7 +81,7 @@ export function loginLocal({ email, password }) {
   return { ok: true, user };
 }
 
-export function signInWithGoogle(googleEmail) {
+export function signInWithGoogle(googleEmail, googleName = null) {
   if (typeof googleEmail !== 'string' || !googleEmail.includes('@')) {
     return { ok: false, error: 'Invalid Google email' };
   }
@@ -89,9 +89,11 @@ export function signInWithGoogle(googleEmail) {
   const users = loadUsers();
   let user = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
   if (!user) {
+    // Use Google display name as username, fallback to email prefix
+    const username = googleName ? googleName.trim() : email.split('@')[0];
     user = {
       id: crypto.randomUUID(),
-      username: email.split('@')[0],
+      username: username,
       email,
       provider: 'google',
       role: isAdminEmail(email) ? 'admin' : 'user',
