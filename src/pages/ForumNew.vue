@@ -1,6 +1,6 @@
 <script setup>
 import SiteHeader from '@/components/SiteHeader.vue'
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useForumStore } from '@/lib/stores/forum'
 import { useRouter } from 'vue-router'
 import { getCurrentUser } from '@/lib/auth'
@@ -14,6 +14,8 @@ const topic = ref('General')
 const error = ref('')
 const images = ref([])
 const isUploading = ref(false)
+const isLoaded = ref(false)
+const showContent = ref(false)
 
 // Update user data
 function updateUser() {
@@ -127,9 +129,18 @@ function cancel() {
 }
 
 // Listen for user data changes
-onMounted(() => {
+onMounted(async () => {
   updateUser()
   window.addEventListener('storage', updateUser)
+  
+  // Trigger animations
+  await nextTick()
+  setTimeout(() => {
+    isLoaded.value = true
+  }, 100)
+  setTimeout(() => {
+    showContent.value = true
+  }, 300)
 })
 
 onBeforeUnmount(() => {
@@ -142,21 +153,21 @@ onBeforeUnmount(() => {
     <SiteHeader />
     
     <div class="main-container">
-      <div class="compose-container">
-        <div class="header">
-          <button class="back-btn" @click="cancel">
+      <div class="compose-container animate-fade-up" :class="{ 'animate-in': isLoaded }">
+        <div class="header animate-slide-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 0.1s">
+          <button class="back-btn animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.0s" @click="cancel">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
             Back to Forum
           </button>
-          <h1 class="title">Create New Post</h1>
-          <p class="subtitle">Share your thoughts with the community</p>
+          <h1 class="title animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.2s">Create New Post</h1>
+          <p class="subtitle animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.3s">Share your thoughts with the community</p>
         </div>
 
-        <div class="form-panel">
+        <div class="form-panel animate-slide-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 0.3s">
           <!-- Author Info -->
-          <div class="author-section">
+          <div class="author-section animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.4s">
             <div class="author-avatar">
               <img v-if="userAvatar" :src="userAvatar" alt="User Avatar" class="avatar-img" />
               <span v-else class="avatar-initials">{{ userInitials }}</span>
@@ -168,7 +179,7 @@ onBeforeUnmount(() => {
           </div>
 
           <!-- Form Fields -->
-          <div class="form-group">
+          <div class="form-group animate-slide-left" :class="{ 'animate-in': showContent }" style="animation-delay: 0.5s">
             <label class="form-label">Post Title</label>
             <input 
               v-model="title" 
@@ -179,7 +190,7 @@ onBeforeUnmount(() => {
             <div class="char-count">{{ title.length }}/100</div>
           </div>
 
-          <div class="form-group">
+          <div class="form-group animate-slide-right" :class="{ 'animate-in': showContent }" style="animation-delay: 0.6s">
             <label class="form-label">Category</label>
             <select v-model="topic" class="form-select">
               <option value="General">💬 General Discussion</option>
@@ -190,7 +201,7 @@ onBeforeUnmount(() => {
         </select>
           </div>
 
-          <div class="form-group">
+          <div class="form-group animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.7s">
             <label class="form-label">Content</label>
             <textarea 
               v-model="content" 
@@ -203,7 +214,7 @@ onBeforeUnmount(() => {
           </div>
 
           <!-- Image Upload Section -->
-          <div class="form-group">
+          <div class="form-group animate-slide-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.8s">
             <label class="form-label">Images (Optional)</label>
             <div class="image-upload-area">
               <input 
@@ -263,7 +274,7 @@ onBeforeUnmount(() => {
           </div>
 
           <!-- Action Buttons -->
-          <div class="action-buttons">
+          <div class="action-buttons animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.9s">
             <button class="btn btn-secondary" @click="cancel" type="button">
               Cancel
             </button>
@@ -303,8 +314,21 @@ onBeforeUnmount(() => {
 
 /* Base Styles */
 .page {
-  background: var(--secondary-color);
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.page::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 300px;
+  background: radial-gradient(ellipse at top, rgba(34, 197, 94, 0.1) 0%, transparent 60%);
+  pointer-events: none;
 }
 
 .main-container {
@@ -328,20 +352,25 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: none;
-  border: none;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--border-color);
   color: var(--text-secondary);
   font-size: 14px;
   cursor: pointer;
-  padding: 8px 12px;
+  transition: all 0.3s ease;
+  padding: 8px 16px;
   border-radius: 8px;
-  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   margin-bottom: 24px;
 }
 
 .back-btn:hover {
-  background: white;
-  color: var(--text-primary);
+  color: var(--primary-color);
+  background: rgba(34, 197, 94, 0.1);
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(34, 197, 94, 0.15);
 }
 
 .back-btn svg {
@@ -680,19 +709,21 @@ onBeforeUnmount(() => {
 }
 
 .btn-primary {
-  background: var(--primary-color);
-  color: white;
+  background: #22c55e !important;
+  color: white !important;
+  border: none !important;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%);
+  background: #16a34a !important;
+  color: white !important;
   transform: translateY(-3px);
   box-shadow: 0 12px 28px rgba(34, 197, 94, 0.4);
 }
 
 .btn-primary:disabled {
-  background: #d1d5db;
-  color: #9ca3af;
+  background: #94a3b8;
+  color: #e2e8f0;
   cursor: not-allowed;
   transform: none;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -744,4 +775,81 @@ onBeforeUnmount(() => {
     grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   }
 }
+
+/* Animation Keyframes */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Animation Classes */
+.animate-fade-up {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-up {
+  opacity: 0;
+  transform: translateY(50px);
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-left {
+  opacity: 0;
+  transform: translateX(-30px);
+  transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-right {
+  opacity: 0;
+  transform: translateX(30px);
+  transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-in {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+
+
 </style>

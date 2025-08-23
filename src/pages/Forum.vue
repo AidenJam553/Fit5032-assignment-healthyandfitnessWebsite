@@ -329,7 +329,7 @@ function isLiked(post) {
 :root {
   --primary-color: #22c55e;
   --primary-dark: #16a34a;
-  --secondary-color: #f0fdf4;
+  --secondary-color: #f1f5f9;
   --text-primary: #0f172a;
   --text-secondary: #64748b;
   --border-color: #e2e8f0;
@@ -339,7 +339,7 @@ function isLiked(post) {
 
 /* Base Styles */
 .page {
-  background: var(--secondary-color);
+  background: #f8fafc;
   min-height: 100vh;
   overflow-x: hidden;
 }
@@ -399,6 +399,7 @@ html {
   opacity: 0.9;
   margin: 0 0 32px 0;
   line-height: 1.6;
+  color: #f1f5f9;
 }
 
 /* Buttons */
