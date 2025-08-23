@@ -3,6 +3,8 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import SiteHeader from '@/components/SiteHeader.vue'
 
 const overlayOpacity = ref(0)
+const isLoaded = ref(false)
+const animatedElements = ref([])
 
 function updateOpacity() {
   const max = Math.max(200, window.innerHeight * 0.8)
@@ -10,9 +12,38 @@ function updateOpacity() {
   overlayOpacity.value = Math.min(1, Math.max(0, y / max))
 }
 
+function observeElements() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('animate-in')
+        observer.unobserve(entry.target)
+      }
+    })
+  }, { 
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+  })
+
+  // Observe all animatable elements
+  document.querySelectorAll('.animate-on-scroll').forEach(el => {
+    observer.observe(el)
+  })
+}
+
 onMounted(() => {
   updateOpacity()
   window.addEventListener('scroll', updateOpacity, { passive: true })
+  
+  // Trigger initial hero animation
+  setTimeout(() => {
+    isLoaded.value = true
+  }, 100)
+  
+  // Set up scroll animations
+  setTimeout(() => {
+    observeElements()
+  }, 300)
 })
 
 onBeforeUnmount(() => {
@@ -25,7 +56,7 @@ onBeforeUnmount(() => {
     <SiteHeader />
 
     <section class="hero">
-      <div class="container hero__inner">
+      <div class="container hero__inner" :class="{ 'hero-loaded': isLoaded }">
         <h1 class="hero__title">Learn and manage your health here!</h1>
         <p class="hero__subtitle">
           Learn about health and nutrition, manage your weight and exercise,
@@ -41,20 +72,20 @@ onBeforeUnmount(() => {
     </section>
 
     <main class="container content">
-      <section class="section courses">
+      <section class="section courses animate-on-scroll">
         <div class="section__header">
           <h2 class="section__title">Courses</h2>
           <a class="section__more" href="#">View more &gt;&gt;</a>
         </div>
         <div class="card-grid">
-          <div class="card-placeholder" aria-label="Course placeholder"></div>
-          <div class="card-placeholder" aria-label="Course placeholder"></div>
-          <div class="card-placeholder" aria-label="Course placeholder"></div>
+          <div class="card-placeholder stagger-1" aria-label="Course placeholder"></div>
+          <div class="card-placeholder stagger-2" aria-label="Course placeholder"></div>
+          <div class="card-placeholder stagger-3" aria-label="Course placeholder"></div>
         </div>
       </section>
 
-      <section class="section two-col">
-        <div class="panel">
+      <section class="section two-col animate-on-scroll">
+        <div class="panel stagger-1">
           <h3 class="panel__title">My Record</h3>
           <ul class="list-placeholder">
             <li></li>
@@ -65,7 +96,7 @@ onBeforeUnmount(() => {
           </ul>
         </div>
 
-        <div class="panel explore">
+        <div class="panel explore stagger-2">
           <h3 class="panel__title">Explore</h3>
           <div class="explore__grid">
             <div class="map-card">
@@ -150,9 +181,18 @@ onBeforeUnmount(() => {
   border-radius: 8px;
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  transition: background .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(0);
 }
-.btn:hover { background: #0f8a43; box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+.btn:hover { 
+  background: #0f8a43; 
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15); 
+  transform: translateY(-2px);
+}
+.btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
 .btn:focus { outline: 2px solid var(--green-500); outline-offset: 2px; }
 
 .btn--outline {
@@ -203,10 +243,47 @@ onBeforeUnmount(() => {
 }
 .hero__actions { display: flex; gap: 12px; margin-top: 20px; }
 
-.scroll-cue { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); color: var(--green-800); font-size: 12px; letter-spacing: .15em; }
-.scroll-cue::after { content: ''; display: block; width: 24px; height: 24px; margin: 6px auto 0; border: 2px solid var(--green-700); border-left: 0; border-top: 0; transform: rotate(45deg); animation: bob 1.5s infinite; }
+.scroll-cue { 
+  position: absolute; 
+  bottom: 16px; 
+  left: 50%; 
+  transform: translateX(-50%); 
+  color: var(--green-800); 
+  font-size: 12px; 
+  letter-spacing: .15em; 
+  animation: float 3s ease-in-out infinite;
+  opacity: 0.8;
+}
+.scroll-cue::after { 
+  content: ''; 
+  display: block; 
+  width: 24px; 
+  height: 24px; 
+  margin: 6px auto 0; 
+  border: 2px solid var(--green-700); 
+  border-left: 0; 
+  border-top: 0; 
+  transform: rotate(45deg); 
+  animation: bob 2s ease-in-out infinite; 
+}
 
-@keyframes bob { 0%, 100% { transform: rotate(45deg) translate(0, 0); } 50% { transform: rotate(45deg) translate(4px, 4px); } }
+@keyframes bob { 
+  0%, 100% { 
+    transform: rotate(45deg) translate(0, 0); 
+  } 
+  50% { 
+    transform: rotate(45deg) translate(4px, 4px); 
+  } 
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0px);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-8px);
+  }
+}
 
 /* bottom fade to reveal content on scroll */
 .hero::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 160px; background: linear-gradient(to bottom, rgba(255,255,255,0), #ffffff 60%, #ffffff); pointer-events: none; }
@@ -230,6 +307,14 @@ onBeforeUnmount(() => {
   border-radius: 12px;
   height: 160px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.card-placeholder:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+  background: linear-gradient(135deg, var(--green-100), #e8f5e8);
 }
 
 .two-col {
@@ -238,14 +323,62 @@ onBeforeUnmount(() => {
   gap: 20px;
   margin-top: 20px;
 }
-.panel { background: #ffffff; border: 1px solid var(--green-100); border-radius: 12px; padding: 16px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+.panel { 
+  background: #ffffff; 
+  border: 1px solid var(--green-100); 
+  border-radius: 12px; 
+  padding: 16px; 
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08); 
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+  border-color: var(--green-200);
+}
 .panel__title { margin: 0 0 12px 0; font-size: 18px; }
 
 .list-placeholder { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .list-placeholder li { height: 12px; background: var(--green-100); border-radius: 6px; }
 
 .explore__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.map-card { background: #eafff1; border: 1px dashed var(--green-600); border-radius: 12px; padding: 24px; display: grid; place-content: center; gap: 12px; text-align: center; box-shadow: 0 3px 10px rgba(0,0,0,0.06); }
+.map-card { 
+  background: #eafff1; 
+  border: 1px dashed var(--green-600); 
+  border-radius: 12px; 
+  padding: 24px; 
+  display: grid; 
+  place-content: center; 
+  gap: 12px; 
+  text-align: center; 
+  box-shadow: 0 3px 10px rgba(0,0,0,0.06); 
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.map-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  background: #e0fceb;
+}
+
+.map-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  transition: left 0.8s ease;
+}
+
+.map-card:hover::before {
+  left: 100%;
+}
 .map-card__icon { font-size: 40px; }
 
 .footer { border-top: 1px solid var(--green-100); padding: 20px 0; color: #2f4d3b; font-size: 14px; }
@@ -259,6 +392,74 @@ onBeforeUnmount(() => {
   .card-grid { grid-template-columns: 1fr; }
   .two-col { grid-template-columns: 1fr; }
   .explore__grid { grid-template-columns: 1fr; }
+}
+
+/* Animation Styles */
+.hero__inner {
+  opacity: 0;
+  transform: translate(-3cm, -1.5cm) translateY(40px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero__inner.hero-loaded {
+  opacity: 1;
+  transform: translate(-3cm, -1.5cm) translateY(0);
+}
+
+.hero__title {
+  transition-delay: 0.1s;
+}
+
+.hero__subtitle {
+  transition-delay: 0.2s;
+}
+
+.hero__actions {
+  transition-delay: 0.3s;
+}
+
+.animate-on-scroll {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-on-scroll.animate-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.stagger-1 {
+  transition-delay: 0.1s;
+}
+
+.stagger-2 {
+  transition-delay: 0.2s;
+}
+
+.stagger-3 {
+  transition-delay: 0.3s;
+}
+
+.card-placeholder,
+.panel {
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-in .card-placeholder,
+.animate-in .panel {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 991px) {
+  .hero__inner {
+    transform: translateY(40px);
+  }
+  
+  .hero__inner.hero-loaded {
+    transform: translateY(0);
+  }
 }
 </style>
 
