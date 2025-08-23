@@ -1,5 +1,12 @@
 <script setup>
 import SiteHeader from '@/components/SiteHeader.vue'
+import { useLessonsStore } from '@/lib/stores/lessons'
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+
+const lessons = useLessonsStore()
+const router = useRouter()
+onMounted(() => lessons.seedIfEmpty())
 </script>
 
 <template>
@@ -31,23 +38,18 @@ import SiteHeader from '@/components/SiteHeader.vue'
 
       <main class="courses">
         <div class="grid">
-          <article class="course">
+          <article class="course" v-for="l in lessons.lessons" :key="l.id">
             <div class="thumb" aria-hidden="true"></div>
             <div class="course__body">
-              <h3 class="course__title">Fundamentals of Nutrition</h3>
-              <p class="muted">Build a solid base: macros, micronutrients, and practical tips.</p>
-              <div class="progress"><div class="progress__bar" style="width:66%"></div></div>
+              <h3 class="course__title">{{ l.title }}</h3>
+              <p class="muted">Topic: {{ l.topic }} · {{ l.minutes }} mins</p>
+              <div class="progress"><div class="progress__bar" :style="{ width: (lessons.progress[l.id] || 0) + '%' }"></div></div>
               <div class="row">
-                <span class="progress__text">66% complete</span>
-                <button class="btn btn--ghost">Continue</button>
+                <span class="progress__text">{{ lessons.progress[l.id] || 0 }}% complete</span>
+                <button class="btn btn--ghost" @click="router.push({ name: 'lesson-detail', params: { id: l.id } })">Open</button>
               </div>
             </div>
           </article>
-          <article class="course placeholder"></article>
-          <article class="course placeholder"></article>
-          <article class="course placeholder"></article>
-          <article class="course placeholder"></article>
-          <article class="course placeholder"></article>
         </div>
       </main>
     </div>

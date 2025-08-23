@@ -41,6 +41,10 @@ body {
 
 /* primitives */
 .container { max-width: 1160px; margin: 0 auto; padding: 0 16px; }
+/* subtle utility shadows for components */
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-md { box-shadow: var(--shadow-md); }
+.shadow-lg { box-shadow: var(--shadow-lg); }
 
 /* buttons */
 .btn { 
