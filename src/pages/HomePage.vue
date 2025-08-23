@@ -1,10 +1,19 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import SiteHeader from '@/components/SiteHeader.vue'
+import { getCurrentUser } from '@/lib/auth'
 
 const overlayOpacity = ref(0)
 const isLoaded = ref(false)
 const animatedElements = ref([])
+const user = ref(null)
+
+// Check if user is logged in
+const isLoggedIn = computed(() => !!user.value)
+
+function updateUser() {
+  user.value = getCurrentUser()
+}
 
 function updateOpacity() {
   const max = Math.max(200, window.innerHeight * 0.8)
@@ -32,8 +41,10 @@ function observeElements() {
 }
 
 onMounted(() => {
+  updateUser()
   updateOpacity()
   window.addEventListener('scroll', updateOpacity, { passive: true })
+  window.addEventListener('storage', updateUser)
   
   // Trigger initial hero animation
   setTimeout(() => {
@@ -48,6 +59,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('scroll', updateOpacity)
+  window.removeEventListener('storage', updateUser)
 })
 </script>
 
@@ -57,14 +69,19 @@ onBeforeUnmount(() => {
 
     <section class="hero">
       <div class="container hero__inner" :class="{ 'hero-loaded': isLoaded }">
-        <h1 class="hero__title">Learn and manage your health here!</h1>
+        <h1 class="hero__title" v-if="!isLoggedIn">Learn and manage your health here!</h1>
+        <h1 class="hero__title" v-else>Welcome! {{ user.username || user.email }}</h1>
         <p class="hero__subtitle">
           Learn about health and nutrition, manage your weight and exercise,
           and become a better version of yourself.
         </p>
-        <div class="hero__actions">
+        <div class="hero__actions" v-if="!isLoggedIn">
           <router-link class="btn btn--primary" to="/login">Log In</router-link>
           <router-link class="btn btn--ghost" to="/register">Create Account</router-link>
+        </div>
+        <div class="hero__actions" v-else>
+          <router-link class="btn btn--primary" to="/learn">Start Learning</router-link>
+          <router-link class="btn btn--ghost" to="/record">Track Progress</router-link>
         </div>
       </div>
       <div class="hero__overlay" :style="{ opacity: overlayOpacity }"></div>
