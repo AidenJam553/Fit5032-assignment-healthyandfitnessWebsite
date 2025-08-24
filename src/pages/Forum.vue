@@ -92,7 +92,9 @@ const filteredPosts = computed(() => {
         case 'my-bookmarks':
           // Get bookmarks from localStorage
           const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]')
-          posts = posts.filter(p => bookmarks.includes(p.id))
+          // Extract post IDs from bookmark objects
+          const bookmarkPostIds = bookmarks.map(b => b.postId)
+          posts = posts.filter(p => bookmarkPostIds.includes(p.id))
           break
       }
     } else {
@@ -205,7 +207,8 @@ const personalStats = computed(() => {
   const myPosts = forum.posts.filter(p => p.author === username).length
   const myLikes = forum.posts.filter(p => p.likedBy?.includes(userId)).length
   const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]')
-  const myBookmarks = bookmarks.length
+  // Count bookmarks for current user
+  const myBookmarks = bookmarks.filter(b => b.userId === userId).length
   
   return {
     posts: myPosts,
