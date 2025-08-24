@@ -126,19 +126,18 @@ export const useForumStore = defineStore('forum', {
       return false
     },
     editPost(postId, updates) {
-      const post = this.getById(postId)
-      if (!post) return false
-      
-      // Only allow editing certain fields
-      const allowedFields = ['title', 'content', 'topic', 'images']
-      allowedFields.forEach(field => {
-        if (updates[field] !== undefined) {
-          post[field] = updates[field]
-        }
-      })
-      
-      // Add edited timestamp
-      post.editedAt = new Date().toISOString()
+      const postIndex = this.posts.findIndex(p => p.id === postId)
+      if (postIndex === -1) {
+        return false
+      }
+
+      const updatedPost = {
+        ...this.posts[postIndex],
+        ...updates,
+        editedAt: new Date().toISOString()
+      }
+
+      this.posts[postIndex] = updatedPost
       
       save(this.posts)
       return true
