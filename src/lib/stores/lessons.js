@@ -16,9 +16,57 @@ export const useLessonsStore = defineStore('lessons', {
   actions: {
     seedIfEmpty() {
       if (this.lessons.length) return
+      this.seedData()
+    },
+    seedData() {
       this.lessons = [
-        { id: 'n1', title: 'Fundamentals of Nutrition', topic: 'Nutrition', minutes: 18 },
-        { id: 'w1', title: 'Beginner Strength Routine', topic: 'Workout', minutes: 22 },
+        // Nutrition - Beginner (6 courses)
+        { id: 'n1', title: 'Fundamentals of Nutrition', topic: 'Nutrition', difficulty: 'Beginner', minutes: 18 },
+        { id: 'n2', title: 'Understanding Macronutrients', topic: 'Nutrition', difficulty: 'Beginner', minutes: 20 },
+        { id: 'n3', title: 'Reading Food Labels', topic: 'Nutrition', difficulty: 'Beginner', minutes: 15 },
+        { id: 'n4', title: 'Meal Planning Basics', topic: 'Nutrition', difficulty: 'Beginner', minutes: 25 },
+        { id: 'n5', title: 'Healthy Grocery Shopping', topic: 'Nutrition', difficulty: 'Beginner', minutes: 22 },
+        { id: 'n6', title: 'Portion Control Guide', topic: 'Nutrition', difficulty: 'Beginner', minutes: 18 },
+
+        // Nutrition - Intermediate (6 courses)
+        { id: 'n7', title: 'Advanced Macronutrient Ratios', topic: 'Nutrition', difficulty: 'Intermediate', minutes: 30 },
+        { id: 'n8', title: 'Supplements and Their Benefits', topic: 'Nutrition', difficulty: 'Intermediate', minutes: 28 },
+        { id: 'n9', title: 'Metabolic Health Optimization', topic: 'Nutrition', difficulty: 'Intermediate', minutes: 35 },
+        { id: 'n10', title: 'Custom Meal Planning', topic: 'Nutrition', difficulty: 'Intermediate', minutes: 32 },
+        { id: 'n11', title: 'Nutrient Timing Strategies', topic: 'Nutrition', difficulty: 'Intermediate', minutes: 27 },
+        { id: 'n12', title: 'Food Allergies and Intolerances', topic: 'Nutrition', difficulty: 'Intermediate', minutes: 24 },
+
+        // Nutrition - Advanced (6 courses)
+        { id: 'n13', title: 'Advanced Nutritional Biochemistry', topic: 'Nutrition', difficulty: 'Advanced', minutes: 45 },
+        { id: 'n14', title: 'Performance Nutrition for Athletes', topic: 'Nutrition', difficulty: 'Advanced', minutes: 50 },
+        { id: 'n15', title: 'Gut Health and Microbiome', topic: 'Nutrition', difficulty: 'Advanced', minutes: 42 },
+        { id: 'n16', title: 'Hormonal Balance Through Nutrition', topic: 'Nutrition', difficulty: 'Advanced', minutes: 48 },
+        { id: 'n17', title: 'Body Composition Optimization', topic: 'Nutrition', difficulty: 'Advanced', minutes: 55 },
+        { id: 'n18', title: 'Recovery Nutrition Strategies', topic: 'Nutrition', difficulty: 'Advanced', minutes: 40 },
+
+        // Workout - Beginner (6 courses)
+        { id: 'w1', title: 'Beginner Strength Routine', topic: 'Workout', difficulty: 'Beginner', minutes: 22 },
+        { id: 'w2', title: 'Basic Cardio Workout', topic: 'Workout', difficulty: 'Beginner', minutes: 25 },
+        { id: 'w3', title: 'Introduction to Yoga', topic: 'Workout', difficulty: 'Beginner', minutes: 30 },
+        { id: 'w4', title: 'Home Workout Essentials', topic: 'Workout', difficulty: 'Beginner', minutes: 20 },
+        { id: 'w5', title: 'Proper Warm-up Techniques', topic: 'Workout', difficulty: 'Beginner', minutes: 15 },
+        { id: 'w6', title: 'Stretching and Flexibility', topic: 'Workout', difficulty: 'Beginner', minutes: 18 },
+
+        // Workout - Intermediate (6 courses)
+        { id: 'w7', title: 'Advanced Strength Training', topic: 'Workout', difficulty: 'Intermediate', minutes: 35 },
+        { id: 'w8', title: 'High-Intensity Interval Training', topic: 'Workout', difficulty: 'Intermediate', minutes: 28 },
+        { id: 'w9', title: 'Power Yoga Flow', topic: 'Workout', difficulty: 'Intermediate', minutes: 40 },
+        { id: 'w10', title: 'Functional Fitness Training', topic: 'Workout', difficulty: 'Intermediate', minutes: 32 },
+        { id: 'w11', title: 'Circuit Training Methods', topic: 'Workout', difficulty: 'Intermediate', minutes: 30 },
+        { id: 'w12', title: 'Injury Prevention Techniques', topic: 'Workout', difficulty: 'Intermediate', minutes: 25 },
+
+        // Workout - Advanced (6 courses)
+        { id: 'w13', title: 'Elite Strength Conditioning', topic: 'Workout', difficulty: 'Advanced', minutes: 50 },
+        { id: 'w14', title: 'Advanced HIIT Protocols', topic: 'Workout', difficulty: 'Advanced', minutes: 45 },
+        { id: 'w15', title: 'Advanced Yoga Asanas', topic: 'Workout', difficulty: 'Advanced', minutes: 55 },
+        { id: 'w16', title: 'Olympic Weightlifting Techniques', topic: 'Workout', difficulty: 'Advanced', minutes: 60 },
+        { id: 'w17', title: 'Periodization Training Methods', topic: 'Workout', difficulty: 'Advanced', minutes: 48 },
+        { id: 'w18', title: 'Sports-Specific Performance', topic: 'Workout', difficulty: 'Advanced', minutes: 52 },
       ]
       save(this.lessons)
     },
@@ -29,6 +77,13 @@ export const useLessonsStore = defineStore('lessons', {
     },
     setProgress(id, pct) {
       this.progress[id] = Math.max(0, Math.min(100, Number(pct)))
+    },
+    resetData() {
+      localStorage.removeItem(LESSONS_KEY)
+      this.lessons = []
+      this.ratings = {}
+      this.progress = {}
+      this.seedData()
     },
   },
   getters: {
