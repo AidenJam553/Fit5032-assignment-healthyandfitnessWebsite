@@ -19,6 +19,7 @@ const showEmojiPicker = ref(false)
 const showImageModal = ref(false)
 const selectedImage = ref(null)
 const currentImageIndex = ref(0)
+const activeReplyId = ref(null)
 
 const post = computed(() => store.getById(String(route.params.id)))
 if (!post.value) router.replace('/forum')
@@ -89,7 +90,14 @@ function toggleEmojiPicker() {
 
 // Add emoji to comment
 function addEmoji(emoji) {
-  comment.value += emoji
+  if (activeReplyId.value) {
+    const commentToReply = comments.value.find(c => c.id === activeReplyId.value)
+    if (commentToReply) {
+      commentToReply.replyContent = (commentToReply.replyContent || '') + emoji
+    }
+  } else {
+    comment.value += emoji
+  }
   showEmojiPicker.value = false
   // Focus back to textarea
   nextTick(() => {
@@ -167,6 +175,11 @@ const isLiked = computed(() => {
 // Check if user bookmarked this post
 const isBookmarked = ref(false)
 
+const isOwnPost = computed(() => {
+  if (!user.value || !post.value) return false
+  return post.value.author === user.value.username || post.value.author === user.value.email
+})
+
 // Load saved bookmarks
 function loadBookmarks() {
   try {
@@ -219,6 +232,21 @@ function handleBookmark() {
   saveBookmarks(bookmarks)
 }
 
+function handleEdit() {
+  router.push({ path: '/forum/new', query: { edit: post.value.id } })
+}
+
+function handleDelete() {
+  if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+    const success = store.deletePost(post.value.id)
+    if (success) {
+      router.push('/forum')
+    } else {
+      alert('Failed to delete the post.')
+    }
+  }
+}
+
 // Handle comment
 function handleComment() {
   if (!user.value) {
@@ -234,7 +262,8 @@ function handleComment() {
     content: comment.value.trim(),
     createdAt: new Date().toISOString(),
     likes: 0,
-    likedBy: []
+    likedBy: [],
+    replies: [] 
   }
   
   comments.value.push(newComment)
@@ -244,6 +273,41 @@ function handleComment() {
   store.addReply(post.value.id)
   
   // Save comments to localStorage
+  const commentsKey = `comments_${post.value.id}`
+  localStorage.setItem(commentsKey, JSON.stringify(comments.value))
+}
+
+function toggleReply(commentItem) {
+  commentItem.isReplying = !commentItem.isReplying
+  if (commentItem.isReplying) {
+    activeReplyId.value = commentItem.id
+  } else {
+    activeReplyId.value = null
+  }
+}
+
+function handleReply(commentItem) {
+  if (!user.value) {
+    router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+  if (!commentItem.replyContent?.trim()) return
+
+  const newReply = {
+    id: crypto.randomUUID(),
+    author: user.value.username || user.value.email,
+    content: commentItem.replyContent.trim(),
+    createdAt: new Date().toISOString(),
+  }
+
+  if (!commentItem.replies) {
+    commentItem.replies = []
+  }
+  commentItem.replies.push(newReply)
+  commentItem.replyContent = ''
+  commentItem.isReplying = false
+  activeReplyId.value = null
+
   const commentsKey = `comments_${post.value.id}`
   localStorage.setItem(commentsKey, JSON.stringify(comments.value))
 }
@@ -308,7 +372,8 @@ onMounted(async () => {
   const commentsKey = `comments_${post.value.id}`
   try {
     const savedComments = JSON.parse(localStorage.getItem(commentsKey) || '[]')
-    comments.value = savedComments
+    // Ensure each comment has a replies array for backward compatibility
+    comments.value = savedComments.map(c => ({ ...c, replies: c.replies || [] }))
   } catch {
     comments.value = []
   }
@@ -405,7 +470,26 @@ function getTopicEmoji(topic) {
         </header>
 
         <!-- Post Title -->
-        <h1 class="post-title animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.2s">{{ post.title }}</h1>
+        <div class="title-section">
+          <h1 class="post-title animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.2s">{{ post.title }}</h1>
+          <!-- Edit/Delete buttons for own post -->
+          <div v-if="isOwnPost" class="post-controls" @click.stop>
+            <button class="control-btn edit-btn" @click="handleEdit" title="Edit Post">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+            <button class="control-btn delete-btn" @click="handleDelete" title="Delete Post">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3,6 5,6 21,6"/>
+                <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/>
+                <line x1="10" y1="11" x2="10" y2="17"/>
+                <line x1="14" y1="11" x2="14" y2="17"/>
+              </svg>
+            </button>
+          </div>
+        </div>
 
         <!-- Post Images -->
         <div v-if="post.images && post.images.length > 0" class="post-images animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.3s">
@@ -532,52 +616,94 @@ function getTopicEmoji(topic) {
 
           <!-- Comments List -->
           <div class="comments-list">
-            <div v-for="commentItem in comments" :key="commentItem.id" class="comment-item">
-              <div class="comment-avatar clickable" @click="handleAvatarClick(commentItem.author)">
-                <img v-if="getUserAvatar(commentItem.author)" :src="getUserAvatar(commentItem.author)" alt="Commenter Avatar" class="avatar-img" />
-                <span v-else class="avatar-initials">{{ getInitials(commentItem.author) }}</span>
-              </div>
-              <div class="comment-content">
-                <div class="comment-header">
-                  <div class="comment-info">
-                    <span class="comment-author">{{ commentItem.author }}</span>
-                    <span class="comment-date">
-                      {{ formatDate(commentItem.createdAt) }}
-                      <span v-if="commentItem.editedAt" class="edited-indicator"> • edited</span>
-                    </span>
+            <div v-for="commentItem in comments" :key="commentItem.id" class="comment-item-wrapper">
+              <div class="comment-item">
+                <div class="comment-avatar clickable" @click="handleAvatarClick(commentItem.author)">
+                  <img v-if="getUserAvatar(commentItem.author)" :src="getUserAvatar(commentItem.author)" alt="Commenter Avatar" class="avatar-img" />
+                  <span v-else class="avatar-initials">{{ getInitials(commentItem.author) }}</span>
+                </div>
+                <div class="comment-content">
+                  <div class="comment-header">
+                    <div class="comment-info">
+                      <span class="comment-author">{{ commentItem.author }}</span>
+                      <span class="comment-date">
+                        {{ formatDate(commentItem.createdAt) }}
+                        <span v-if="commentItem.editedAt" class="edited-indicator"> • edited</span>
+                      </span>
+                    </div>
+                    <!-- Edit/Delete buttons for own comments -->
+                    <div class="comment-controls-wrapper">
+                      <button class="control-btn reply-btn" @click="toggleReply(commentItem)" title="Reply to comment">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                        </svg>
+                      </button>
+                      <div v-if="isOwnComment(commentItem)" class="comment-controls">
+                        <button class="control-btn edit-btn" @click="editComment(commentItem)" title="Edit Comment">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                          </svg>
+                        </button>
+                        <button class="control-btn delete-btn" @click="deleteComment(commentItem)" title="Delete Comment">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3,6 5,6 21,6"/>
+                            <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/>
+                            <line x1="10" y1="11" x2="10" y2="17"/>
+                            <line x1="14" y1="11" x2="14" y2="17"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <!-- Edit/Delete buttons for own comments -->
-                  <div v-if="isOwnComment(commentItem)" class="comment-controls">
-                    <button class="control-btn edit-btn" @click="editComment(commentItem)" title="Edit Comment">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                      </svg>
-                    </button>
-                    <button class="control-btn delete-btn" @click="deleteComment(commentItem)" title="Delete Comment">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="3,6 5,6 21,6"/>
-                        <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/>
-                        <line x1="10" y1="11" x2="10" y2="17"/>
-                        <line x1="14" y1="11" x2="14" y2="17"/>
-                      </svg>
-                    </button>
+                  <p v-if="!commentItem.isEditing" class="comment-text">{{ commentItem.content }}</p>
+                  <!-- Edit comment form -->
+                  <div v-else class="edit-comment-form">
+                    <textarea
+                      v-model="commentItem.editContent"
+                      class="edit-comment-input"
+                      rows="3"
+                      placeholder="Edit your comment..."
+                      @keydown.ctrl.enter="saveComment(commentItem)"
+                      @keydown.esc="cancelEdit(commentItem)"
+                    ></textarea>
+                    <div class="edit-comment-actions">
+                      <button class="btn-save" @click="saveComment(commentItem)">Save</button>
+                      <button class="btn-cancel" @click="cancelEdit(commentItem)">Cancel</button>
+                    </div>
                   </div>
                 </div>
-                <p v-if="!commentItem.isEditing" class="comment-text">{{ commentItem.content }}</p>
-                <!-- Edit comment form -->
-                <div v-else class="edit-comment-form">
-                  <textarea
-                    v-model="commentItem.editContent"
-                    class="edit-comment-input"
-                    rows="3"
-                    placeholder="Edit your comment..."
-                    @keydown.ctrl.enter="saveComment(commentItem)"
-                    @keydown.esc="cancelEdit(commentItem)"
-                  ></textarea>
-                  <div class="edit-comment-actions">
-                    <button class="btn-save" @click="saveComment(commentItem)">Save</button>
-                    <button class="btn-cancel" @click="cancelEdit(commentItem)">Cancel</button>
+              </div>
+              <!-- Reply form -->
+              <div v-if="commentItem.isReplying" class="reply-form">
+                 <textarea
+                    v-model="commentItem.replyContent"
+                    class="reply-input"
+                    rows="2"
+                    placeholder="Write a reply..."
+                 ></textarea>
+                 <div class="reply-actions">
+                    <button class="emoji-btn-reply" @click="toggleEmojiPicker" title="Add emoji">😊</button>
+                    <button class="btn-cancel" @click="toggleReply(commentItem)">Cancel</button>
+                    <button class="btn-save" @click="handleReply(commentItem)" :disabled="!commentItem.replyContent?.trim()">Reply</button>
+                 </div>
+              </div>
+
+              <!-- Replies List -->
+              <div v-if="commentItem.replies && commentItem.replies.length > 0" class="replies-list">
+                <div v-for="reply in commentItem.replies" :key="reply.id" class="comment-item reply-item">
+                  <div class="comment-avatar clickable" @click="handleAvatarClick(reply.author)">
+                    <img v-if="getUserAvatar(reply.author)" :src="getUserAvatar(reply.author)" alt="Commenter Avatar" class="avatar-img" />
+                    <span v-else class="avatar-initials">{{ getInitials(reply.author) }}</span>
+                  </div>
+                  <div class="comment-content">
+                    <div class="comment-header">
+                      <div class="comment-info">
+                        <span class="comment-author">{{ reply.author }}</span>
+                        <span class="comment-date">{{ formatDate(reply.createdAt) }}</span>
+                      </div>
+                    </div>
+                    <p class="comment-text">{{ reply.content }}</p>
                   </div>
                 </div>
               </div>
@@ -897,6 +1023,19 @@ function getTopicEmoji(topic) {
   color: var(--text-primary);
   margin: 0 0 24px 0;
   line-height: 1.2;
+}
+
+.title-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin: 0 0 24px 0;
+}
+
+.post-controls {
+  display: flex;
+  gap: 8px;
+  padding-left: 16px;
 }
 
 /* Post Images */
@@ -1332,11 +1471,19 @@ function getTopicEmoji(topic) {
   gap: 16px;
 }
 
+.comment-item-wrapper {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border-color);
+}
+.comment-item-wrapper:last-child {
+  border-bottom: none;
+}
+
 .comment-item {
   display: flex;
   gap: 12px;
   padding: 16px 0;
-  border-bottom: 1px solid var(--border-color);
 }
 
 .comment-item:last-child {
@@ -1360,12 +1507,23 @@ function getTopicEmoji(topic) {
   gap: 12px;
 }
 
-.comment-controls {
+.comment-controls-wrapper {
   display: flex;
   align-items: center;
   gap: 6px;
   opacity: 0;
   transition: opacity 0.2s ease;
+}
+
+.comment-item:hover .comment-controls-wrapper,
+.comment-item-wrapper:hover .comment-controls-wrapper {
+  opacity: 1;
+}
+
+.comment-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .comment-item:hover .comment-controls {
@@ -1930,10 +2088,10 @@ function getTopicEmoji(topic) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.8);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1941,8 +2099,8 @@ function getTopicEmoji(topic) {
 }
 
 .control-btn svg {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   stroke-width: 2;
 }
 
@@ -1963,6 +2121,15 @@ function getTopicEmoji(topic) {
 .control-btn.delete-btn:hover {
   background: rgba(239, 68, 68, 0.1);
   color: #dc2626;
+  transform: scale(1.05);
+}
+
+.reply-btn {
+  color: var(--text-secondary);
+}
+.reply-btn:hover {
+  background: rgba(100, 116, 139, 0.1);
+  color: var(--text-primary);
   transform: scale(1.05);
 }
 
@@ -2037,6 +2204,87 @@ function getTopicEmoji(topic) {
   color: #6b7280;
   font-style: italic;
   font-size: 11px;
+}
+
+/* Replies */
+.replies-list {
+  padding-left: 50px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reply-item {
+  padding: 12px 0;
+  border-top: 1px solid var(--border-color);
+}
+
+.reply-form {
+  padding-left: 62px;
+  margin-bottom: 16px;
+}
+
+.reply-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: white;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  margin-bottom: 8px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+  transition: all 0.2s ease;
+}
+
+.reply-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.06), 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+.reply-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+.reply-actions .btn-save {
+  background-color: var(--primary-color);
+  color: black;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.reply-actions .btn-save:hover {
+  background-color: var(--primary-dark);
+}
+
+.reply-actions .btn-cancel {
+  background-color: #f1f5f9;
+  color: #64748b;
+  border-color: #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.reply-actions .btn-cancel:hover {
+  background-color: #e2e8f0;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+
+.emoji-btn-reply {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  margin-right: auto;
+}
+.emoji-btn-reply:hover {
+  background: rgba(34, 197, 94, 0.1);
 }
 </style>
 

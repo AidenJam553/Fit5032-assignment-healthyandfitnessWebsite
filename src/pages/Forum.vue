@@ -572,7 +572,9 @@ html {
   font-weight: 800;
   margin: 0 0 16px 0;
   letter-spacing: -0.025em;
-  color: #1e3a8a;
+  color: white;
+  -webkit-text-stroke: 1.5px var(--primary-dark);
+  paint-order: stroke fill;
 }
 
 .hero-subtitle {

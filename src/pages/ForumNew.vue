@@ -108,47 +108,7 @@ function removeImage(imageId) {
   images.value = images.value.filter(img => img.id !== imageId)
 }
 
-function handleSubmitClick(event) {
-  console.log('=== BUTTON CLICKED ===')
-  console.log('Event:', event)
-  console.log('Event type:', event.type)
-  console.log('Target:', event.target)
-  
-  // Add navigation monitoring
-  window.addEventListener('beforeunload', () => {
-    console.log('Page is about to unload!')
-  })
-  
-  window.addEventListener('unload', () => {
-    console.log('Page is unloading!')
-  })
-  
-  // Monitor for router navigation
-  const originalPush = router.push
-  const originalReplace = router.replace
-  
-  router.push = function(...args) {
-    console.log('Router push called with:', args)
-    return originalPush.apply(this, args)
-  }
-  
-  router.replace = function(...args) {
-    console.log('Router replace called with:', args)
-    return originalReplace.apply(this, args)
-  }
-  
-  // Call submit function
-  submit()
-}
-
 async function submit() {
-  console.log('=== SUBMIT FUNCTION CALLED ===')
-  console.log('isEditMode:', isEditMode.value)
-  console.log('editingPostId:', editingPostId.value)
-  console.log('isSubmitDisabled:', isSubmitDisabled.value)
-  console.log('title.value:', title.value)
-  console.log('content.value length:', content.value?.length)
-  
   error.value = ''
   
   if (!title.value || title.value.length < 4) { 
@@ -162,14 +122,6 @@ async function submit() {
   }
   
   if (isEditMode.value) {
-    console.log('Entering edit mode branch')
-    
-    // Prevent any form submission or page reload
-    window.addEventListener('beforeunload', (e) => {
-      e.preventDefault()
-      e.returnValue = ''
-    }, { once: true })
-    
     // Update existing post
     const updates = {
       title: title.value,
@@ -182,50 +134,12 @@ async function submit() {
       }))
     }
     
-    console.log('Calling store.editPost with:', editingPostId.value, updates)
     const success = store.editPost(editingPostId.value, updates)
-    console.log('Edit result:', success)
     
     if (success) {
-      console.log('Setting showSuccess to true')
-      
-      // Try multiple approaches to set showSuccess
       showSuccess.value = true
-      console.log('showSuccess immediately after setting:', showSuccess.value)
-      
-      // Force trigger reactive update
-      await nextTick()
-      console.log('showSuccess after nextTick:', showSuccess.value)
-      
-      // Try setting again after nextTick
-      showSuccess.value = true
-      console.log('showSuccess after setting again:', showSuccess.value)
-      
-      // Force another update cycle
-      await nextTick()
-      console.log('showSuccess after second nextTick:', showSuccess.value)
-      
-      console.log('DOM showSuccess check:', document.querySelector('.success-container'))
-      
-      // Remove the beforeunload listener
-      window.removeEventListener('beforeunload', () => {})
-      
-      // Start countdown after ensuring DOM is updated
-      setTimeout(() => {
-        console.log('Starting countdown, showSuccess is:', showSuccess.value)
-        startCountdown()
-      }, 200)
-      
-      // Also set a backup timer to check showSuccess value
-      setTimeout(() => {
-        console.log('Backup check - showSuccess is:', showSuccess.value)
-        if (!showSuccess.value) {
-          console.log('showSuccess was reset! Setting it again.')
-          showSuccess.value = true
-        }
-      }, 500)
+      startCountdown()
     } else {
-      console.log('Edit failed')
       error.value = 'Failed to update post'
     }
   } else {
@@ -253,11 +167,9 @@ function cancel() {
 
 // Success page functions
 function startCountdown() {
-  console.log('Starting countdown')
   countdown.value = 5
   const timer = setInterval(() => {
     countdown.value--
-    console.log('Countdown:', countdown.value)
     if (countdown.value <= 0) {
       clearInterval(timer)
       navigateToPost()
@@ -273,12 +185,6 @@ function navigateToPost() {
 onMounted(async () => {
   updateUser()
   window.addEventListener('storage', updateUser)
-  
-  // Watch showSuccess changes
-  watch(showSuccess, (newVal, oldVal) => {
-    console.log('showSuccess changed from', oldVal, 'to', newVal)
-    console.log('Current DOM state:', document.querySelector('.success-container'))
-  }, { immediate: true })
   
   // Initialize store data first
   store.seedIfEmpty()
@@ -300,7 +206,7 @@ onMounted(async () => {
         title.value = post.title
         content.value = post.content
         topic.value = post.topic
-        images.value = post.images || []
+        images.value = (post.images || []).map(img => ({ ...img }))
       } else {
         // Redirect if user doesn't own the post
         router.push('/forum')
@@ -331,22 +237,9 @@ onBeforeUnmount(() => {
     <SiteHeader />
     
     <div class="main-container">
-      <!-- Debug info -->
-      <div style="position: fixed; top: 10px; right: 10px; background: red; color: white; padding: 10px; z-index: 9999; font-size: 11px; max-width: 300px;">
-        <div :style="{background: showSuccess ? 'green' : 'red', padding: '2px'}">showSuccess: {{ showSuccess }}</div>
-        isEditMode: {{ isEditMode }}<br>
-        editingPostId: {{ editingPostId }}<br>
-        title: "{{ title?.substring(0, 20) }}..."<br>
-        content length: {{ content?.length || 0 }}<br>
-        isUploading: {{ isUploading }}<br>
-        Button disabled: {{ isSubmitDisabled }}<br>
-        <button @click="showSuccess = true" style="margin-top: 5px; color: black; font-size: 10px;">Test Success</button>
-        <button @click="submit" style="margin-top: 5px; color: black; font-size: 10px;">Force Submit</button>
-        <button @click="showSuccess = false" style="margin-top: 5px; color: black; font-size: 10px;">Reset</button>
-      </div>
       
       <!-- Success Message -->
-      <div v-show="showSuccess" class="success-container animate-fade-up animate-in" style="background: rgba(0,255,0,0.1); border: 2px solid green;">
+      <div v-show="showSuccess" class="success-container animate-fade-up animate-in">
         <div class="success-content">
           <div class="success-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -507,9 +400,9 @@ onBeforeUnmount(() => {
             </button>
             <button 
               class="btn btn-primary" 
-              @click.stop.prevent="handleSubmitClick"
+              @click="submit"
               type="button"
-              style="opacity: 1 !important; pointer-events: auto !important;"
+              :disabled="isSubmitDisabled"
             >
               <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 19l7-7 3 3-7 7-3-3z"/>
