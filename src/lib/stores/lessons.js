@@ -74,9 +74,11 @@ export const useLessonsStore = defineStore('lessons', {
       const arr = this.ratings[id] || []
       arr.push(Number(value))
       this.ratings[id] = arr
+      save(this.lessons)
     },
     setProgress(id, pct) {
       this.progress[id] = Math.max(0, Math.min(100, Number(pct)))
+      save(this.lessons)
     },
     resetData() {
       localStorage.removeItem(LESSONS_KEY)
