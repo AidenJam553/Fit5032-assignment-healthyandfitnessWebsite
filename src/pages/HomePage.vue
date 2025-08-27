@@ -195,7 +195,7 @@ onBeforeUnmount(() => {
   background: var(--green-700);
   color: #fff;
   padding: 10px 16px;
-  border-radius: 8px;
+  border-radius: 16px;
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
