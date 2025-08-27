@@ -2,7 +2,7 @@
 import SiteHeader from '@/components/SiteHeader.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { computed, ref, onMounted, nextTick } from 'vue'
-import { useLessonsStore } from '@/lib/stores/lessons'
+import { useLessonsStore } from '@/lib/stores/lessons.js'
 import { getCurrentUser } from '@/lib/auth'
 
 const route = useRoute()
@@ -11,6 +11,9 @@ const lessons = useLessonsStore()
 const user = getCurrentUser()
 
 lessons.seedIfEmpty()
+
+// 课单相关状态
+const isInWishlist = ref(false)
 
 const id = computed(() => route.params.id)
 const lesson = computed(() => lessons.lessons.find(l => l.id === id.value) || { 
@@ -278,16 +281,37 @@ function startLearning() {
   router.push({ name: 'lesson-learning', params: { id: id.value } })
 }
 
+// 课单相关方法
+function toggleWishlist() {
+  if (!user) {
+    // 如果用户未登录，可以提示登录或跳转到登录页面
+    router.push('/login')
+    return
+  }
+  
+  if (isInWishlist.value) {
+    lessons.removeFromWishlist(user.id, id.value)
+  } else {
+    lessons.addToWishlist(user.id, id.value)
+  }
+  isInWishlist.value = !isInWishlist.value
+}
+
+function checkWishlistStatus() {
+  if (user) {
+    isInWishlist.value = lessons.isInWishlist(user.id, id.value)
+  }
+}
+
 onMounted(async () => {
   loadComments()
+  checkWishlistStatus()
+  
+  // 立即显示内容，不等待动画延迟
+  isLoaded.value = true
+  showContent.value = true
   
   await nextTick()
-  setTimeout(() => {
-    isLoaded.value = true
-  }, 100)
-  setTimeout(() => {
-    showContent.value = true
-  }, 300)
 })
 </script>
 
@@ -356,6 +380,20 @@ onMounted(async () => {
                   <path d="M5 12h14M12 5l7 7-7 7"/>
                 </svg>
                 Start Learning
+              </button>
+              
+              <button 
+                class="btn-wishlist animate-bounce-in" 
+                :class="{ 'animate-in': showContent, 'in-wishlist': isInWishlist }" 
+                style="animation-delay: 1.3s" 
+                @click="toggleWishlist"
+                :title="isInWishlist ? 'Remove from My Courses' : 'Add to My Courses'"
+              >
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path v-if="!isInWishlist" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  <path v-else d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="currentColor"/>
+                </svg>
+                {{ isInWishlist ? 'In My Courses' : 'Add to My Courses' }}
               </button>
             </div>
           </div>
@@ -803,6 +841,9 @@ onMounted(async () => {
 
 .course-actions {
   margin-top: 16px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .btn-start-learning {
@@ -835,6 +876,48 @@ onMounted(async () => {
 .btn-icon {
   width: 20px;
   height: 20px;
+}
+
+.btn-wishlist {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
+  padding: 16px 32px;
+  border-radius: 16px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: var(--shadow-md);
+  transform: translateY(0);
+  backdrop-filter: blur(10px);
+}
+
+.btn-wishlist:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: var(--shadow-xl);
+}
+
+.btn-wishlist.in-wishlist {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.btn-wishlist.in-wishlist:hover {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+  color: white;
+}
+
+.btn-wishlist:active {
+  transform: translateY(-1px) scale(0.98);
 }
 
 /* Course Content */

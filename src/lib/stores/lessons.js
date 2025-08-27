@@ -1,17 +1,24 @@
 import { defineStore } from 'pinia'
 
 const LESSONS_KEY = 'hf_lessons_v1'
+const WISHLIST_KEY = 'hf_wishlist_v1'
 
 function load() {
   try { return JSON.parse(localStorage.getItem(LESSONS_KEY) || '[]') } catch { return [] }
 }
 function save(data) { localStorage.setItem(LESSONS_KEY, JSON.stringify(data)) }
 
+function loadWishlist() {
+  try { return JSON.parse(localStorage.getItem(WISHLIST_KEY) || '{}') } catch { return {} }
+}
+function saveWishlist(data) { localStorage.setItem(WISHLIST_KEY, JSON.stringify(data)) }
+
 export const useLessonsStore = defineStore('lessons', {
   state: () => ({
     lessons: load(),
     ratings: {},
     progress: {},
+    userWishlist: loadWishlist(), // 用户课单 { userId: [lessonId1, lessonId2, ...] }
   }),
   actions: {
     seedIfEmpty() {
@@ -85,7 +92,38 @@ export const useLessonsStore = defineStore('lessons', {
       this.lessons = []
       this.ratings = {}
       this.progress = {}
+      this.userWishlist = {}
       this.seedData()
+    },
+    // 添加课程到用户课单
+    addToWishlist(userId, lessonId) {
+      if (!this.userWishlist[userId]) {
+        this.userWishlist[userId] = []
+      }
+      if (!this.userWishlist[userId].includes(lessonId)) {
+        this.userWishlist[userId].push(lessonId)
+        saveWishlist(this.userWishlist)
+      }
+    },
+    // 从用户课单移除课程
+    removeFromWishlist(userId, lessonId) {
+      if (this.userWishlist[userId]) {
+        this.userWishlist[userId] = this.userWishlist[userId].filter(id => id !== lessonId)
+        saveWishlist(this.userWishlist)
+      }
+    },
+    // 检查课程是否在用户课单中
+    isInWishlist(userId, lessonId) {
+      return this.userWishlist[userId]?.includes(lessonId) || false
+    },
+    // 获取用户的课单
+    getUserWishlist(userId) {
+      return this.userWishlist[userId] || []
+    },
+    // 获取用户课单的课程详情
+    getUserWishlistLessons(userId) {
+      const wishlistIds = this.getUserWishlist(userId)
+      return this.lessons.filter(lesson => wishlistIds.includes(lesson.id))
     },
   },
   getters: {
