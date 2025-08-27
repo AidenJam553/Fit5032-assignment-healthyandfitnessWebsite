@@ -307,11 +307,16 @@ onMounted(async () => {
   loadComments()
   checkWishlistStatus()
   
-  // 立即显示内容，不等待动画延迟
+  // 设置加载状态
   isLoaded.value = true
-  showContent.value = true
   
+  // 确保DOM更新后再触发动画
   await nextTick()
+  
+  // 使用requestAnimationFrame确保动画能正常播放
+  requestAnimationFrame(() => {
+    showContent.value = true
+  })
 })
 </script>
 
@@ -882,7 +887,7 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  background: rgba(255, 255, 255, 0.9);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%);
   color: var(--text-primary);
   border: 2px solid var(--border-color);
   padding: 16px 32px;
@@ -897,7 +902,7 @@ onMounted(async () => {
 }
 
 .btn-wishlist:hover {
-  background: rgba(255, 255, 255, 1);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 0.95) 100%);
   border-color: var(--primary-color);
   color: var(--primary-color);
   transform: translateY(-3px) scale(1.02);
@@ -905,15 +910,18 @@ onMounted(async () => {
 }
 
 .btn-wishlist.in-wishlist {
-  background: var(--primary-color);
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   color: white;
-  border-color: var(--primary-color);
+  border-color: #f59e0b;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
 }
 
 .btn-wishlist.in-wishlist:hover {
-  background: var(--primary-dark);
-  border-color: var(--primary-dark);
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  border-color: #d97706;
   color: white;
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
+  transform: translateY(-3px) scale(1.02);
 }
 
 .btn-wishlist:active {
@@ -1680,120 +1688,382 @@ onMounted(async () => {
 
 /* Animation Classes */
 .animate-fade-up {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0 !important;
+  transform: translateY(30px) !important;
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .animate-fade-up.animate-in {
-  opacity: 1;
-  transform: translateY(0);
+  opacity: 1 !important;
+  transform: translateY(0) !important;
 }
 
 .animate-slide-left {
-  opacity: 0;
-  transform: translateX(-50px);
-  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0 !important;
+  transform: translateX(-50px) !important;
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .animate-slide-left.animate-in {
-  opacity: 1;
-  transform: translateX(0);
+  opacity: 1 !important;
+  transform: translateX(0) !important;
 }
 
 .animate-slide-right {
-  opacity: 0;
-  transform: translateX(50px);
-  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0 !important;
+  transform: translateX(50px) !important;
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .animate-slide-right.animate-in {
-  opacity: 1;
-  transform: translateX(0);
+  opacity: 1 !important;
+  transform: translateX(0) !important;
 }
 
 .animate-slide-up {
-  opacity: 0;
-  transform: translateY(50px);
-  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0 !important;
+  transform: translateY(50px) !important;
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .animate-slide-up.animate-in {
-  opacity: 1;
-  transform: translateY(0);
+  opacity: 1 !important;
+  transform: translateY(0) !important;
 }
 
 .animate-scale-in {
-  opacity: 0;
-  transform: scale(0.8);
-  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0 !important;
+  transform: scale(0.8) !important;
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .animate-scale-in.animate-in {
-  opacity: 1;
-  transform: scale(1);
+  opacity: 1 !important;
+  transform: scale(1) !important;
 }
 
 .animate-bounce-in {
-  opacity: 0;
-  transform: scale(0.3) translateY(50px);
-  transition: all 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  opacity: 0 !important;
+  transform: scale(0.3) translateY(50px) !important;
+  transition: all 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
 }
 
 .animate-bounce-in.animate-in {
-  opacity: 1;
-  transform: scale(1) translateY(0);
+  opacity: 1 !important;
+  transform: scale(1) translateY(0) !important;
 }
 
 .animate-rotate-in {
-  opacity: 0;
-  transform: rotate(-180deg) scale(0.5);
-  transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0 !important;
+  transform: rotate(-180deg) scale(0.5) !important;
+  transition: all 1s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .animate-rotate-in.animate-in {
-  opacity: 1;
-  transform: rotate(0deg) scale(1);
+  opacity: 1 !important;
+  transform: rotate(0deg) scale(1) !important;
 }
 
 .animate-fade-in {
-  opacity: 0;
-  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0 !important;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .animate-fade-in.animate-in {
-  opacity: 1;
+  opacity: 1 !important;
 }
 
 .animate-star-in {
-  opacity: 0;
-  transform: scale(0) rotate(180deg);
-  transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  opacity: 0 !important;
+  transform: scale(0) rotate(180deg) !important;
+  transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
 }
 
 .animate-star-in.animate-in {
-  opacity: 1;
-  transform: scale(1) rotate(0deg);
+  opacity: 1 !important;
+  transform: scale(1) rotate(0deg) !important;
 }
 
 .animate-progress-fill {
   width: 0% !important;
-  transition: width 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: width 1.5s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .animate-progress-fill.animate-in {
   width: var(--progress-width) !important;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
+/* Comprehensive Responsive Design */
+
+/* Mobile First - Extra Small Screens (< 576px) */
+@media (max-width: 575px) {
+  .container {
+    padding: 0 var(--container-padding-mobile);
+  }
+  
+  .back-section {
+    padding: 16px 0;
+  }
+  
+  .back-btn {
+    padding: 10px 16px;
+    font-size: 14px;
+    min-height: var(--touch-target-min);
+  }
+  
+  .course-header {
+    margin-bottom: 32px;
+  }
+  
+  .course-hero {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  
+  .course-image {
+    border-radius: 16px;
+  }
+  
+  .course-image img {
+    height: 200px;
+  }
+  
+  .course-overlay {
+    padding: 16px;
+  }
+  
+  .course-badge,
+  .course-duration {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .course-topic {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .course-title {
+    font-size: 1.5rem;
+    line-height: 1.3;
+  }
+  
+  .course-description {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  
+  .course-meta {
+    gap: 8px;
+  }
+  
+  .meta-item {
+    font-size: 13px;
+    gap: 8px;
+  }
+  
+  .meta-icon {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .course-actions {
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
+  }
+  
+  .btn-start-learning,
+  .btn-wishlist {
+    width: 100%;
+    padding: 16px 24px;
+    font-size: 16px;
+    min-height: 52px;
+    justify-content: center;
+  }
+  
+  .content-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+  
+  .section-title {
+    font-size: 1.25rem;
+    margin-bottom: 16px;
+  }
+  
+  .progress-card,
+  .rating-card {
+    padding: 20px;
+    border-radius: 16px;
+  }
+  
+  .progress-card {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+  
+  .progress-circle {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .progress-text {
+    font-size: 1rem;
+  }
+  
+  .progress-info h4 {
+    font-size: 1.125rem;
+  }
+  
+  .progress-description {
+    font-size: 13px;
+  }
+  
+  .rating-stars {
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  
+  .star {
+    font-size: 1.5rem;
+  }
+  
+  .comments-section {
+    margin-top: 24px;
+  }
+  
+  .comments-title {
+    font-size: 1.25rem;
+    margin-bottom: 20px;
+  }
+  
+  .add-comment {
+    padding: 16px;
+    border-radius: 16px;
+    gap: 12px;
+  }
+  
+  .comment-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .comment-input {
+    padding: 12px 50px 12px 16px;
+    font-size: 14px;
+    min-height: 80px;
+  }
+  
+  .emoji-btn {
+    top: 12px;
+    right: 12px;
+    font-size: 16px;
+  }
+  
+  .comment-actions {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .comment-rating {
+    justify-content: center;
+  }
+  
+  .submit-comment-btn {
+    width: 100%;
+    padding: 14px 20px;
+    font-size: 15px;
+    min-height: 48px;
+  }
+  
+  .comment-item {
+    padding: 16px;
+    border-radius: 16px;
+    gap: 12px;
+  }
+  
+  .comment-avatar {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .comment-author {
+    font-size: 14px;
+  }
+  
+  .comment-date {
+    font-size: 12px;
+  }
+  
+  .comment-text {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  
+  .reply-form {
+    margin-left: 48px;
+    padding: 16px;
+  }
+  
+  .replies-list {
+    margin-left: 48px;
+  }
+  
+  .reply-item {
+    padding: 16px;
+  }
+  
+  .emoji-picker {
+    max-height: 250px;
+  }
+  
+  .emoji-grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+  }
+  
+  .emoji-item {
+    padding: 6px;
+    font-size: 18px;
+  }
+}
+
+/* Small Screens (576px - 767px) */
+@media (min-width: 576px) and (max-width: 767px) {
+  .container {
+    padding: 0 var(--container-padding-tablet);
+  }
+  
   .course-hero {
     grid-template-columns: 1fr;
     gap: 32px;
   }
   
+  .course-image img {
+    height: 250px;
+  }
+  
   .course-title {
-    font-size: 2rem;
+    font-size: 1.75rem;
+  }
+  
+  .course-description {
+    font-size: 15px;
+  }
+  
+  .course-actions {
+    flex-direction: row;
+    gap: 16px;
+  }
+  
+  .btn-start-learning,
+  .btn-wishlist {
+    flex: 1;
+    min-width: 0;
   }
   
   .content-grid {
@@ -1802,37 +2072,242 @@ onMounted(async () => {
   }
   
   .progress-card {
-    flex-direction: column;
-    text-align: center;
+    flex-direction: row;
+    text-align: left;
   }
   
   .comment-actions {
-    flex-direction: column;
-    gap: 16px;
-    align-items: stretch;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
   }
   
-  .btn-submit-comment {
-    width: 100%;
+  .submit-comment-btn {
+    width: auto;
+  }
+  
+  .emoji-grid {
+    grid-template-columns: repeat(7, 1fr);
   }
 }
 
-@media (max-width: 480px) {
+/* Medium Screens (768px - 991px) */
+@media (min-width: 768px) and (max-width: 991px) {
   .container {
-    padding: 0 16px;
+    padding: 0 var(--container-padding-tablet);
+  }
+  
+  .course-hero {
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+  }
+  
+  .course-image img {
+    height: 280px;
   }
   
   .course-title {
-    font-size: 1.75rem;
+    font-size: 2rem;
+  }
+  
+  .content-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+  
+  .progress-card {
+    flex-direction: row;
+  }
+  
+  .comment-actions {
+    flex-direction: row;
+  }
+  
+  .emoji-grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+}
+
+/* Large Screens (992px - 1199px) */
+@media (min-width: 992px) and (max-width: 1199px) {
+  .container {
+    padding: 0 var(--container-padding-desktop);
+  }
+  
+  .course-hero {
+    gap: 48px;
+  }
+  
+  .course-image img {
+    height: 300px;
+  }
+  
+  .course-title {
+    font-size: 2.25rem;
   }
   
   .course-description {
-    font-size: 1rem;
+    font-size: 1.125rem;
   }
   
-  .btn-start-learning {
-    width: 100%;
+  .content-grid {
+    gap: 32px;
+  }
+  
+  .progress-card,
+  .rating-card {
+    padding: 32px;
+  }
+  
+  .add-comment {
+    padding: 24px;
+  }
+  
+  .comment-item {
+    padding: 24px;
+  }
+}
+
+/* Extra Large Screens (1200px - 1399px) */
+@media (min-width: 1200px) and (max-width: 1399px) {
+  .container {
+    padding: 0 var(--container-padding-desktop);
+  }
+  
+  .course-hero {
+    gap: 56px;
+  }
+  
+  .course-image img {
+    height: 320px;
+  }
+  
+  .course-title {
+    font-size: 2.5rem;
+  }
+  
+  .content-grid {
+    gap: 36px;
+  }
+  
+  .progress-card,
+  .rating-card {
+    padding: 36px;
+  }
+}
+
+/* Ultra Large Screens (≥ 1400px) */
+@media (min-width: 1400px) {
+  .container {
+    padding: 0 var(--container-padding-large);
+    max-width: 1400px;
+  }
+  
+  .course-hero {
+    gap: 64px;
+  }
+  
+  .course-image img {
+    height: 360px;
+  }
+  
+  .course-title {
+    font-size: 2.75rem;
+  }
+  
+  .course-description {
+    font-size: 1.25rem;
+  }
+  
+  .content-grid {
+    gap: 40px;
+  }
+  
+  .progress-card,
+  .rating-card {
+    padding: 40px;
+  }
+  
+  .add-comment {
+    padding: 32px;
+  }
+  
+  .comment-item {
+    padding: 28px;
+  }
+  
+  .section-title {
+    font-size: 1.75rem;
+  }
+  
+  .comments-title {
+    font-size: 1.5rem;
+  }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .btn-start-learning,
+  .btn-wishlist,
+  .submit-comment-btn {
+    min-height: 48px;
+    padding: 16px 24px;
+  }
+  
+  .nav__link,
+  .control-btn {
+    min-height: 44px;
+    padding: 12px 16px;
+  }
+  
+  .star {
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
     justify-content: center;
+  }
+  
+  .emoji-item {
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* High DPI Display Optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .logo__img,
+  .course-image img,
+  .avatar-img {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* Reduced Motion Preferences - Only applies if user explicitly prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-slide-left,
+  .animate-slide-right,
+  .animate-slide-up,
+  .animate-scale-in,
+  .animate-bounce-in,
+  .animate-rotate-in,
+  .animate-fade-in,
+  .animate-star-in,
+  .animate-progress-fill {
+    transition: opacity 0.3s ease;
+    animation: none;
+  }
+  
+  .comment-item:hover,
+  .btn-start-learning:hover,
+  .btn-wishlist:hover,
+  .submit-comment-btn:hover {
+    transform: none;
   }
 }
 </style>
