@@ -97,6 +97,44 @@ const getFilterTitle = () => {
   }
   return 'All Courses'
 }
+
+// 获取课程简介
+const getCourseDescription = (title) => {
+  const descriptions = {
+    'Fundamentals of Nutrition': 'Learn the basics of nutrition science, including essential nutrients, dietary guidelines, and how to make informed food choices for better health.',
+    'Understanding Macronutrients': 'Dive deep into proteins, carbohydrates, and fats - the building blocks of nutrition that fuel your body and support your fitness goals.',
+    'Reading Food Labels': 'Master the skill of reading and understanding nutrition labels to make healthier food choices and avoid hidden ingredients.',
+    'Meal Planning Basics': 'Discover how to plan balanced meals that support your health goals, save time, and reduce food waste.',
+    'Healthy Grocery Shopping': 'Learn strategies for navigating the grocery store to fill your cart with nutritious, budget-friendly foods.',
+    'Portion Control Guide': 'Understand proper portion sizes and learn practical techniques to manage your food intake without feeling deprived.',
+    'Advanced Macronutrient Ratios': 'Explore advanced strategies for optimizing your macronutrient balance based on your specific fitness goals and body composition.',
+    'Supplements and Their Benefits': 'Learn about essential supplements, their benefits, and how to safely incorporate them into your nutrition plan.',
+    'Metabolic Health Optimization': 'Discover how to optimize your metabolism through nutrition, exercise, and lifestyle factors for better health outcomes.',
+    'Custom Meal Planning': 'Create personalized meal plans that align with your dietary preferences, fitness goals, and lifestyle constraints.',
+    'Nutrient Timing Strategies': 'Learn when and how to time your nutrient intake for maximum performance, recovery, and body composition results.',
+    'Food Allergies and Intolerances': 'Understand how to identify, manage, and work around food allergies and intolerances while maintaining a balanced diet.',
+    'Beginner Strength Routine': 'Start your strength training journey with safe, effective exercises designed for beginners.',
+    'Basic Cardio Workout': 'Build cardiovascular fitness with simple, low-impact cardio exercises you can do anywhere.',
+    'Introduction to Yoga': 'Begin your yoga practice with fundamental poses, breathing techniques, and mindfulness principles.',
+    'Home Workout Essentials': 'Create an effective workout routine using minimal equipment and space in your own home.',
+    'Proper Warm-up Techniques': 'Learn essential warm-up exercises to prevent injury and prepare your body for optimal performance.',
+    'Stretching and Flexibility': 'Improve your flexibility and mobility with targeted stretching routines for better movement and injury prevention.',
+    'Advanced Strength Training': 'Take your strength training to the next level with advanced techniques and progressive overload strategies.',
+    'High-Intensity Interval Training': 'Maximize your fitness gains with time-efficient HIIT workouts that boost metabolism and cardiovascular health.',
+    'Power Yoga Flow': 'Enhance your yoga practice with dynamic flows that build strength, flexibility, and mental focus.',
+    'Functional Fitness Training': 'Train your body for real-world movements and activities with functional exercises that improve daily performance.',
+    'Circuit Training Methods': 'Combine strength and cardio in efficient circuit workouts that burn calories and build muscle simultaneously.',
+    'Injury Prevention Techniques': 'Learn proper form, recovery strategies, and injury prevention techniques to maintain long-term fitness.',
+    'Elite Strength Conditioning': 'Master advanced strength training techniques used by elite athletes and fitness professionals.',
+    'Advanced HIIT Protocols': 'Push your limits with cutting-edge HIIT protocols designed for maximum performance and fat loss.',
+    'Advanced Yoga Asanas': 'Explore advanced yoga poses and sequences that challenge your strength, balance, and flexibility.',
+    'Olympic Weightlifting Techniques': 'Learn the fundamentals of Olympic weightlifting for explosive power and athletic performance.',
+    'Periodization Training Methods': 'Structure your training with periodization principles for continuous progress and peak performance.',
+    'Sports-Specific Performance': 'Tailor your training to specific sports and activities for improved performance and reduced injury risk.'
+  }
+  
+  return descriptions[title] || 'A comprehensive course designed to help you achieve your health and fitness goals through expert guidance and practical knowledge.'
+}
 </script>
 
 <template>
@@ -316,6 +354,7 @@ const getFilterTitle = () => {
               class="course-card animate-fade-up"
               :class="{ 'animate-in': isLoaded }"
               :style="`animation-delay: ${1.2 + index * 0.1}s`"
+              @click="router.push({ name: 'lesson-detail', params: { id: course.id } })"
             >
               <div class="course-thumb" :class="`difficulty-${course.difficulty.toLowerCase()}`">
                 <div class="course-badge">{{ course.difficulty }}</div>
@@ -324,21 +363,21 @@ const getFilterTitle = () => {
               <div class="course-body">
                 <div class="course-topic">{{ course.topic }}</div>
                 <h3 class="course-title">{{ course.title }}</h3>
-                <div class="course-progress">
-                  <div class="progress-bar">
-                    <div class="progress-fill" :style="{ width: (lessons.progress[course.id] || 0) + '%' }"></div>
+                <div class="course-description">
+                  {{ getCourseDescription(course.title) }}
+                </div>
+                <div class="course-actions">
+                  <div class="course-rating">
+                    <div class="stars">
+                      <span v-for="i in 5" :key="i" class="star" :class="{ 'filled': i <= (lessons.averageRating(course.id) || 0) }">★</span>
+                    </div>
+                    <span class="rating-text">{{ (lessons.averageRating(course.id) || 0).toFixed(1) }}</span>
                   </div>
-                  <span class="progress-text">{{ lessons.progress[course.id] || 0 }}% complete</span>
-              </div>
-                <button 
-                  class="btn btn-primary course-btn"
-                  @click="router.push({ name: 'lesson-detail', params: { id: course.id } })"
-                >
-                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
-                  Start Learning
-                </button>
+                  <div class="course-progress-info">
+                    <span class="progress-percentage">{{ lessons.progress[course.id] || 0 }}%</span>
+                    <span class="progress-label">Complete</span>
+                  </div>
+                </div>
             </div>
           </article>
         </div>
@@ -780,11 +819,13 @@ const getFilterTitle = () => {
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
 }
 
 .course-card:hover {
   transform: translateY(-8px) scale(1.02);
   box-shadow: var(--shadow-xl);
+  border-color: var(--primary-color);
 }
 
 .course-thumb {
@@ -860,28 +901,16 @@ const getFilterTitle = () => {
   line-height: 1.4;
 }
 
-.course-progress {
-  margin-bottom: 24px;
-}
-
-.progress-bar {
-  height: 8px;
-  background: var(--bg-light);
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 8px;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-.progress-text {
+.course-description {
   font-size: 0.875rem;
   color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 24px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .course-btn {
@@ -910,6 +939,63 @@ const getFilterTitle = () => {
 .btn-icon {
   width: 18px;
   height: 18px;
+}
+
+/* Course Actions */
+.course-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.course-rating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stars {
+  display: flex;
+  gap: 2px;
+}
+
+.star {
+  color: #d1d5db;
+  font-size: 16px;
+  transition: color 0.2s ease;
+}
+
+.star.filled {
+  color: #fbbf24;
+}
+
+.rating-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.course-progress-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.progress-percentage {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.progress-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* Empty State */

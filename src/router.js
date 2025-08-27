@@ -7,6 +7,7 @@ const Record = () => import('./pages/Record.vue')
 const About = () => import('./pages/About.vue')
 // New flows
 const LessonDetail = () => import('./pages/LessonDetail.vue')
+const LessonLearning = () => import('./pages/LessonLearning.vue')
 const ForumNew = () => import('./pages/ForumNew.vue')
 const ForumDetail = () => import('./pages/ForumDetail.vue')
 const Explore = () => import('./pages/Explore.vue')
@@ -34,6 +35,7 @@ const routes = [
   { path: '/forum/:id', name: 'forum-detail', component: ForumDetail },
   { path: '/learn', name: 'learn', component: Learn },
   { path: '/learn/:id', name: 'lesson-detail', component: LessonDetail },
+  { path: '/learn/:id/learning', name: 'lesson-learning', component: LessonLearning },
   { path: '/record', name: 'record', component: Record },
   { path: '/explore', name: 'explore', component: Explore },
   { path: '/profile', name: 'profile', component: ProfileInfo },
