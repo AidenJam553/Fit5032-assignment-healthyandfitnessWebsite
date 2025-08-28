@@ -111,18 +111,19 @@ function initialsFrom(u) {
         </router-link>
         <router-link class="nav__link nav__link--mobile" to="/record" active-class="active" @click="closeMobileMenu">
           <svg class="nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 19c-5 0-6-3-6-3s1-3 6-3 6 3 6 3-1 3-6 3z"/>
-            <path d="M9 19c0 0-1-1-1-3s1-3 1-3"/>
-            <path d="M15 19c0 0 1-1 1-3s-1-3-1-3"/>
-            <path d="M9 10a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v9"/>
+            <path d="M3 3v18h18"/>
+            <path d="M18 17l-4-4-4 4-4-4"/>
+            <circle cx="7" cy="12" r="1"/>
+            <circle cx="12" cy="8" r="1"/>
+            <circle cx="17" cy="13" r="1"/>
           </svg>
           Record
         </router-link>
         <router-link class="nav__link nav__link--mobile" to="/about" active-class="active" @click="closeMobileMenu">
           <svg class="nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/>
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
+            <path d="M12 16v-4"/>
+            <path d="M12 8h.01"/>
           </svg>
           About
         </router-link>

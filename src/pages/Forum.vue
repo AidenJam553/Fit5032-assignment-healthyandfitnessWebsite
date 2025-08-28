@@ -13,6 +13,11 @@ const scrollY = ref(0)
 const heroHeight = ref(0)
 const activePersonalFilter = ref('all') // 'all', 'my-posts', 'my-likes', 'my-bookmarks'
 
+// Add scroll listener for drawer effect
+const handleScroll = () => {
+  scrollY.value = window.scrollY
+}
+
 onMounted(async () => {
   forum.seedIfEmpty()
   await nextTick()
@@ -20,20 +25,11 @@ onMounted(async () => {
     isLoaded.value = true
   }, 100)
   
-  // Add scroll listener for drawer effect
-  const handleScroll = () => {
-    scrollY.value = window.scrollY
-  }
-  
   window.addEventListener('scroll', handleScroll, { passive: true })
-  
-  // Clean up on unmount
-  const cleanup = () => {
-    window.removeEventListener('scroll', handleScroll)
-  }
-  
-  // Store cleanup function for unmount
-  onBeforeUnmount(cleanup)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleScroll)
 })
 
 // Computed property for hero transform
@@ -274,6 +270,72 @@ function getEmptyMessage() {
         </div>
       </div>
     </section>
+
+    <!-- Mobile Search and Categories (moved to top) -->
+    <div class="mobile-controls container">
+      <!-- Search -->
+      <div class="mobile-search-card">
+        <h3 class="mobile-section-title">Search Posts</h3>
+        <div class="search-box">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input 
+            v-model="searchQuery"
+            type="text" 
+            placeholder="Search posts, authors..."
+            class="search-input"
+          />
+        </div>
+      </div>
+
+      <!-- Categories and Activity Row -->
+      <div class="mobile-filters-row">
+        <!-- My Activity Dropdown -->
+        <div v-if="getCurrentUser()" class="mobile-activity-card">
+          <h3 class="mobile-section-title">My Activity</h3>
+          <div class="activity-dropdown">
+            <select 
+              :value="activePersonalFilter" 
+              @change="setPersonalFilter($event.target.value)"
+              class="activity-select"
+            >
+              <option value="all">All Posts</option>
+              <option value="my-posts">My Posts ({{ personalStats.posts }})</option>
+              <option value="my-likes">My Likes ({{ personalStats.likes }})</option>
+              <option value="my-bookmarks">My Bookmarks ({{ personalStats.bookmarks }})</option>
+            </select>
+            <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6,9 12,15 18,9"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Categories Dropdown -->
+        <div class="mobile-categories-card">
+          <h3 class="mobile-section-title">Categories</h3>
+          <div class="categories-dropdown">
+            <select 
+              :value="forum.activeTopic" 
+              @change="forum.setTopic($event.target.value); setPersonalFilter('all')"
+              class="category-select"
+            >
+              <option 
+                v-for="cat in categories" 
+                :key="cat.name" 
+                :value="cat.name"
+              >
+                {{ cat.name }} ({{ cat.count }})
+              </option>
+            </select>
+            <svg class="dropdown-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6,9 12,15 18,9"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Main Content -->
     <div class="container main-content">
@@ -1359,8 +1421,100 @@ html {
   transform: translateY(-2px) scale(1.01);
 }
 
+/* Mobile Controls (hidden on desktop) */
+.mobile-controls {
+  display: none;
+  padding: 20px;
+  gap: 16px;
+  flex-direction: column;
+}
+
+/* Mobile Filters Row */
+.mobile-filters-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.mobile-search-card,
+.mobile-categories-card,
+.mobile-activity-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--border-color);
+}
+
+.mobile-section-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 12px 0;
+}
+
+/* Categories Dropdown */
+.categories-dropdown,
+.activity-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.category-select,
+.activity-select {
+  appearance: none;
+  width: 100%;
+  padding: 14px 40px 14px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 14px;
+  background: #f8fafc;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.category-select:focus,
+.activity-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+.dropdown-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+  pointer-events: none;
+  transition: transform 0.2s ease;
+}
+
+.category-select:focus + .dropdown-icon,
+.activity-select:focus + .dropdown-icon {
+  transform: translateY(-50%) rotate(180deg);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
+  /* Show mobile controls */
+  .mobile-controls {
+    display: flex;
+  }
+  
+  /* Hide search, categories, and activity in sidebar */
+  .sidebar .sidebar-card:nth-child(1),
+  .sidebar .sidebar-card:nth-child(2),
+  .sidebar .sidebar-card:nth-child(3) {
+    display: none;
+  }
+  
   .content-grid {
     grid-template-columns: 1fr;
     gap: 24px;
@@ -1395,6 +1549,26 @@ html {
   .topic-badge {
     align-self: flex-start;
   }
+  
+  /* Mobile Controls styling improvements */
+  .mobile-controls {
+    margin-top: -10px;
+    margin-bottom: 20px;
+  }
+  
+  .mobile-search-card,
+  .mobile-categories-card,
+  .mobile-activity-card {
+    animation: fadeUp 0.6s ease-out;
+  }
+  
+  .mobile-categories-card {
+    animation-delay: 0.2s;
+  }
+  
+  .mobile-activity-card {
+    animation-delay: 0.3s;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1417,6 +1591,40 @@ html {
   .stats-grid {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+  
+  /* Mobile controls for small screens */
+  .mobile-controls {
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .mobile-search-card,
+  .mobile-categories-card,
+  .mobile-activity-card {
+    padding: 14px;
+  }
+  
+  /* Keep horizontal layout even on very small screens */
+  .mobile-filters-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  
+  .mobile-section-title {
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+  }
+  
+  .category-select,
+  .activity-select {
+    padding: 12px 36px 12px 14px;
+    font-size: 13px;
+  }
+  
+  .search-input {
+    padding: 12px 12px 12px 40px;
+    font-size: 13px;
   }
 }
 </style>

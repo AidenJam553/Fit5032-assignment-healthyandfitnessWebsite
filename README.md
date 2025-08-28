@@ -34,10 +34,37 @@ Vite will print the local URL (e.g. `http://localhost:5174`). The API runs at `h
 
 ## Google OAuth setup
 
-1. Create a Google Cloud project and configure OAuth 2.0 Client ID (Web)
-2. Authorized JavaScript origins: `http://localhost:5174` (or the port shown by Vite)
-3. Redirect URIs are not required for the Identity Services button
-4. Use the environment variables shown above
+### Step-by-step instructions:
+
+1. **Go to Google Cloud Console**: https://console.cloud.google.com/
+2. **Create or select a project**
+3. **Enable APIs**: 
+   - Go to "APIs & Services" → "Library"
+   - Search for and enable "Google Identity API" or "Google+ API"
+4. **Create OAuth 2.0 Client ID**:
+   - Go to "APIs & Services" → "Credentials"
+   - Click "Create Credentials" → "OAuth 2.0 Client ID"
+   - Choose "Web application" as the application type
+5. **Configure authorized origins**:
+   - Add these JavaScript origins:
+     - `http://localhost:5173` (default Vite dev port)
+     - `http://127.0.0.1:5173`
+     - Your production domain when deploying
+6. **Copy the Client ID** and use it in the environment variables above
+
+### Common issues:
+
+- **"Origin not allowed" error**: Make sure you've added the correct localhost URL to authorized origins
+- **No Google button**: Check that VITE_GOOGLE_CLIENT_ID is set correctly
+- **"Missing credential" error**: Backend GOOGLE_CLIENT_ID should match the frontend one
+
+### Alternative setup with .env file:
+
+Create a `.env` file in the root directory:
+```bash
+VITE_GOOGLE_CLIENT_ID=your-google-oauth-client-id-here
+GOOGLE_CLIENT_ID=your-google-oauth-client-id-here
+```
 
 ## Test accounts (for demo)
 
