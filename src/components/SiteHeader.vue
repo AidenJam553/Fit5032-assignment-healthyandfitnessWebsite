@@ -162,7 +162,7 @@ function initialsFrom(u) {
   display: flex; 
   align-items: center; 
   justify-content: space-between; 
-  height: 64px; 
+  height: 56px; 
   position: relative;
 }
 
@@ -223,7 +223,11 @@ function initialsFrom(u) {
 .btn.btn--outline { 
   background: #ffffff; 
   color: var(--green-700); 
-  border-color: #ffffff; 
+  border-color: #ffffff;
+  /* Override default button height for nav bar */
+  min-height: 32px;
+  padding: 6px 12px;
+  font-size: 13px;
 }
 
 .btn.btn--outline:hover { 
@@ -470,7 +474,7 @@ function initialsFrom(u) {
 
 @media (min-width: 992px) {
   .topbar__inner {
-    height: 72px;
+    height: 64px;
   }
   
   .logo__img {
@@ -485,11 +489,17 @@ function initialsFrom(u) {
     padding: 10px 16px;
     font-size: 16px;
   }
+  
+  .btn.btn--outline {
+    min-height: 34px;
+    padding: 8px 16px;
+    font-size: 14px;
+  }
 }
 
 @media (min-width: 1400px) {
   .topbar__inner {
-    height: 80px;
+    height: 72px;
   }
   
   .logo__img {
@@ -498,6 +508,12 @@ function initialsFrom(u) {
   
   .brand__text {
     font-size: 30px;
+  }
+  
+  .btn.btn--outline {
+    min-height: 36px;
+    padding: 10px 18px;
+    font-size: 15px;
   }
 }
 </style>

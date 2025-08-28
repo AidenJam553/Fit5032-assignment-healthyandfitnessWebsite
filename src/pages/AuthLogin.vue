@@ -22,8 +22,20 @@ async function onSubmit() {
 
 function renderGoogle() {
   const gi = window.google && window.google.accounts && window.google.accounts.id
-  if (!gi) return
-  gi.initialize({ client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID, callback: handleGoogleResponse })
+  if (!gi) {
+    console.log('Google Identity Services not available')
+    return
+  }
+  
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+  console.log('Google Client ID:', clientId ? 'Set' : 'Not set')
+  
+  if (!clientId) {
+    console.error('VITE_GOOGLE_CLIENT_ID environment variable not set')
+    return
+  }
+  
+  gi.initialize({ client_id: clientId, callback: handleGoogleResponse })
   gi.renderButton(document.getElementById('googleBtn'), { theme: 'outline', size: 'large' })
 }
 
