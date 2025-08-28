@@ -1,14 +1,22 @@
 <script setup>
-// Static admin dashboard skeleton
+import { logout } from '@/lib/auth'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+function handleLogout() {
+  logout()
+  router.push('/')
+}
 </script>
 
 <template>
   <div class="admin">
     <header class="admin__bar">
       <div class="container admin__bar-inner">
-        <div class="logo">LOGO</div>
+        <router-link to="/admin" class="logo">ADMIN MANAGE SYSTEM</router-link>
         <div class="admin__actions">
-          <button class="btn btn--outline">Log out</button>
+          <button class="btn btn--outline" @click="handleLogout">Log out</button>
           <div class="chip">
             <span class="chip__avatar">A</span>
             <span>Admin</span>
@@ -91,7 +99,16 @@
 
 .admin__bar { background: #fff; border-bottom: 1px solid var(--gray-200); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(6px); }
 .admin__bar-inner { height: 64px; display: flex; align-items: center; justify-content: space-between; }
-.logo { font-weight: 800; color: var(--green-800); }
+.logo { 
+  font-weight: 800; 
+  color: var(--green-800); 
+  text-decoration: none;
+  cursor: pointer;
+}
+.logo:hover { 
+  color: var(--green-600); 
+  text-decoration: none;
+}
 .admin__actions { display: flex; align-items: center; gap: 12px; }
 
 .btn { border: 1px solid var(--green-700); background: #fff; color: var(--green-800); padding: 8px 12px; border-radius: 8px; box-shadow: var(--shadow-sm); }

@@ -68,9 +68,14 @@ GOOGLE_CLIENT_ID=your-google-oauth-client-id-here
 
 ## Test accounts (for demo)
 
-- Admin emails: `admin@admin.com`, or any address ending with `@admin.com`
-- User email: `user@example.com`
+- **管理员账号（唯一）**: 
+  - 邮箱: `admin@admin.com`
+  - 密码: `Admin123`
+- 普通用户: 可自由注册任意邮箱（除管理员邮箱外）
 
-Behavior:
-- Admin emails redirect to `/admin`
-- Others redirect to `/`
+**注意**:
+- 管理员账号有且只有一个，系统启动时会自动创建
+- 禁止注册新的管理员账号
+- 管理员只能通过本地登录（邮箱+密码），不支持Google登录
+- 管理员登录后自动重定向到 `/admin`
+- 普通用户重定向到 `/`
