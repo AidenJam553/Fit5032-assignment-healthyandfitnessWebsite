@@ -32,11 +32,64 @@ function renderGoogle() {
   
   if (!clientId) {
     console.error('VITE_GOOGLE_CLIENT_ID environment variable not set')
+    showGoogleSetupMessage()
     return
   }
   
-  gi.initialize({ client_id: clientId, callback: handleGoogleResponse })
-  gi.renderButton(document.getElementById('googleBtn'), { theme: 'outline', size: 'large' })
+  try {
+    gi.initialize({ 
+      client_id: clientId, 
+      callback: handleGoogleResponse,
+      auto_select: false,
+      cancel_on_tap_outside: true
+    })
+    gi.renderButton(document.getElementById('googleBtn'), { 
+      theme: 'outline', 
+      size: 'large',
+      width: '100%'
+    })
+  } catch (err) {
+    console.error('Google initialization error:', err)
+    showGoogleSetupMessage()
+  }
+}
+
+function showGoogleSetupMessage() {
+  const googleBtn = document.getElementById('googleBtn')
+  if (googleBtn) {
+    googleBtn.innerHTML = `
+      <div style="
+        padding: 12px 16px; 
+        border: 1px solid #d1d5db; 
+        border-radius: 8px; 
+        background: #f9fafb; 
+        color: #6b7280; 
+        text-align: center; 
+        font-size: 14px;
+        line-height: 1.4;
+      ">
+        <div style="margin-bottom: 4px; font-weight: 600;">Google Sign-in not configured</div>
+        <div style="font-size: 12px;">
+          Set VITE_GOOGLE_CLIENT_ID in environment variables.<br>
+          See console for setup instructions.
+        </div>
+      </div>
+    `
+    
+    console.group('🔧 Google OAuth Setup Instructions')
+    console.log('1. Go to Google Cloud Console: https://console.cloud.google.com/')
+    console.log('2. Create a project or select existing one')
+    console.log('3. Enable Google Identity API')
+    console.log('4. Go to Credentials → Create OAuth 2.0 Client ID')
+    console.log('5. Add authorized origins:')
+    console.log('   - http://localhost:5173')
+    console.log('   - http://127.0.0.1:5173')
+    console.log('   - Your production domain')
+    console.log('6. Copy Client ID and add to .env file:')
+    console.log('   VITE_GOOGLE_CLIENT_ID=your-client-id-here')
+    console.log('   GOOGLE_CLIENT_ID=your-client-id-here')
+    console.groupEnd()
+  }
 }
 
 async function handleGoogleResponse(response) {

@@ -62,11 +62,21 @@ const topics = ['Nutrition', 'Workout']
 
 // 过滤器处理函数
 const setDifficultyFilter = (difficulty) => {
-  activeDifficulty.value = activeDifficulty.value === difficulty ? '' : difficulty
+  // For sidebar clicks - toggle behavior
+  if (typeof difficulty === 'string' && activeDifficulty.value === difficulty) {
+    activeDifficulty.value = ''
+  } else {
+    activeDifficulty.value = difficulty
+  }
 }
 
 const setTopicFilter = (topic) => {
-  activeTopic.value = activeTopic.value === topic ? '' : topic
+  // For sidebar clicks - toggle behavior  
+  if (typeof topic === 'string' && activeTopic.value === topic) {
+    activeTopic.value = ''
+  } else {
+    activeTopic.value = topic
+  }
 }
 
 // 检查过滤器是否激活
@@ -181,6 +191,41 @@ const getCourseDescription = (title) => {
         </div>
       </div>
     </section>
+
+    <!-- Mobile Filters -->
+    <div class="mobile-filters animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 0.9s">
+      <div class="container">
+        <div class="mobile-filters-row">
+          <div class="mobile-filter-item">
+            <label class="filter-label">Difficulty Level</label>
+            <select 
+              v-model="activeDifficulty" 
+              class="filter-dropdown"
+
+            >
+              <option value="">All Levels</option>
+              <option v-for="difficulty in difficulties" :key="difficulty" :value="difficulty">
+                {{ difficulty }}
+              </option>
+            </select>
+          </div>
+          
+          <div class="mobile-filter-item">
+            <label class="filter-label">Course Topics</label>
+            <select 
+              v-model="activeTopic" 
+              class="filter-dropdown"
+
+            >
+              <option value="">All Topics</option>
+              <option v-for="topic in topics" :key="topic" :value="topic">
+                {{ topic }}
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Main Content -->
     <div class="container main-content">
@@ -462,10 +507,13 @@ const getCourseDescription = (title) => {
 /* Search Container */
 .search-container {
   margin-bottom: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .search-box {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   background: white;
   border-radius: 50px;
@@ -528,6 +576,102 @@ const getCourseDescription = (title) => {
   opacity: 0.8;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* Mobile Filters */
+.mobile-filters {
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border-bottom: 1px solid var(--border-color);
+  padding: 24px 0;
+  display: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.mobile-filters-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.mobile-filter-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-label::before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+  border-radius: 2px;
+}
+
+.filter-dropdown {
+  padding: 14px 18px;
+  border: 2px solid var(--border-color);
+  border-radius: 16px;
+  background: white;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'%3e%3cpath stroke='%2310b981' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3e%3c/svg%3e");
+  background-position: right 14px center;
+  background-repeat: no-repeat;
+  background-size: 18px;
+  padding-right: 44px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.filter-dropdown:hover {
+  border-color: var(--primary-color);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.filter-dropdown:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1), 0 4px 12px rgba(16, 185, 129, 0.15);
+  transform: translateY(-1px);
+}
+
+/* Remove animations on mobile devices */
+@media (max-width: 1024px) {
+  .filter-dropdown {
+    transition: none;
+  }
+  
+  .filter-dropdown:hover {
+    transform: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+  
+  .filter-dropdown:focus {
+    transform: none;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  }
+}
+
+.filter-dropdown option {
+  padding: 12px;
+  background: white;
+  color: var(--text-primary);
+  font-weight: 500;
 }
 
 /* Main Content */
@@ -908,6 +1052,7 @@ const getCourseDescription = (title) => {
   margin-bottom: 24px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1127,13 +1272,17 @@ const getCourseDescription = (title) => {
 
 /* Responsive Design */
 @media (max-width: 1024px) {
+  .mobile-filters {
+    display: block;
+  }
+  
   .content-grid {
     grid-template-columns: 1fr;
     gap: 24px;
   }
   
   .sidebar {
-    order: 2;
+    display: none;
   }
   
   .feed {
@@ -1155,8 +1304,15 @@ const getCourseDescription = (title) => {
   }
   
   .hero-stats {
-    flex-direction: column;
     gap: 24px;
+  }
+  
+  .hero-stats .stat-number {
+    font-size: 2rem;
+  }
+  
+  .hero-stats .stat-label {
+    font-size: 0.75rem;
   }
   
   .main-content {
@@ -1179,6 +1335,73 @@ const getCourseDescription = (title) => {
     grid-template-columns: 1fr;
     gap: 12px;
   }
+  
+  /* Search box responsive fixes */
+  .search-container {
+    padding: 0 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .search-box {
+    max-width: none;
+    width: calc(100% - 32px);
+    padding: 12px 20px;
+  }
+  
+  .search-input {
+    min-width: 0;
+    width: 100%;
+    font-size: 0.875rem;
+  }
+  
+  .search-input::placeholder {
+    font-size: 0.875rem;
+  }
+  
+  /* Mobile filters responsive */
+  .mobile-filters {
+    padding: 20px 0;
+  }
+  
+  .mobile-filters-row {
+    gap: 16px;
+  }
+  
+  .filter-dropdown {
+    padding: 12px 16px;
+    font-size: 0.8rem;
+    padding-right: 40px;
+    border-radius: 14px;
+  }
+  
+  .filter-label {
+    font-size: 0.8rem;
+  }
+  
+  .filter-label::before {
+    width: 3px;
+    height: 14px;
+  }
+  
+  /* Feed content responsive */
+  .feed-header {
+    margin-top: 1cm;
+    margin-bottom: 24px;
+  }
+  
+  .feed-title {
+    font-size: 1.5rem;
+  }
+  
+  .course-count {
+    font-size: 0.875rem;
+  }
+  
+  .feed-subtitle {
+    font-size: 0.875rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1200,6 +1423,101 @@ const getCourseDescription = (title) => {
   
   .courses-grid {
     grid-template-columns: 1fr;
+  }
+  
+  /* Enhanced mobile search box fixes */
+  .search-container {
+    padding: 0 20px;
+    margin-bottom: 32px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .search-box {
+    padding: 10px 16px;
+    border-radius: 25px;
+    width: calc(100% - 40px);
+  }
+  
+  .search-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+  }
+  
+  .search-input {
+    font-size: 0.875rem;
+  }
+  
+  .search-input::placeholder {
+    font-size: 0.875rem;
+  }
+  
+  .hero-title {
+    font-size: 2rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 1rem;
+    padding: 0 16px;
+  }
+  
+  .hero-stats {
+    gap: 16px;
+  }
+  
+  .hero-stats .stat-number {
+    font-size: 1.75rem;
+  }
+  
+  .hero-stats .stat-label {
+    font-size: 0.7rem;
+  }
+  
+  /* Mobile filters for very small screens */
+  .mobile-filters {
+    padding: 16px 0;
+  }
+  
+  .mobile-filters-row {
+    gap: 12px;
+  }
+  
+  .filter-dropdown {
+    padding: 10px 14px;
+    font-size: 0.75rem;
+    padding-right: 36px;
+    border-radius: 12px;
+    background-size: 16px;
+  }
+  
+  .filter-label {
+    font-size: 0.75rem;
+  }
+  
+  .filter-label::before {
+    width: 3px;
+    height: 12px;
+  }
+  
+  /* Feed content for very small screens */
+  .feed-header {
+    margin-top: 1cm;
+    margin-bottom: 20px;
+  }
+  
+  .feed-title {
+    font-size: 1.25rem;
+  }
+  
+  .course-count {
+    font-size: 0.8rem;
+  }
+  
+  .feed-subtitle {
+    font-size: 0.8rem;
+    line-height: 1.4;
   }
 }
 </style>
