@@ -195,7 +195,7 @@ onBeforeUnmount(() => {
   background: var(--green-700);
   color: #fff;
   padding: 10px 16px;
-  border-radius: 8px;
+  border-radius: 16px;
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -405,7 +405,63 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 767px) {
-  .hero__title { font-size: 32px; line-height: 1.35; }
+  .hero__inner {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .hero__title { 
+    font-size: 32px; 
+    line-height: 1.3; 
+    margin-bottom: 20px;
+    font-weight: 700;
+    text-align: center;
+  }
+  
+  .hero__subtitle {
+    font-size: 17px;
+    line-height: 1.6;
+    margin-bottom: 32px;
+    padding-right: 0;
+    opacity: 0.9;
+    text-align: center;
+    max-width: 300px;
+  }
+  
+  .hero__actions {
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 32px;
+    width: 100%;
+    max-width: 280px;
+    align-items: center;
+  }
+  
+  .hero__actions .btn {
+    width: 100%;
+    padding: 16px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    justify-content: center;
+    min-height: 52px;
+    border-radius: 12px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+  }
+  
+  .hero__actions .btn--primary {
+    box-shadow: 0 4px 14px rgba(22, 163, 74, 0.25);
+  }
+  
+  .hero__actions .btn--ghost {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(22, 163, 74, 0.2);
+  }
+  
   .card-grid { grid-template-columns: 1fr; }
   .two-col { grid-template-columns: 1fr; }
   .explore__grid { grid-template-columns: 1fr; }
@@ -472,10 +528,49 @@ onBeforeUnmount(() => {
 @media (max-width: 991px) {
   .hero__inner {
     transform: translateY(40px);
+    padding: 40px 0 48px;
   }
   
   .hero__inner.hero-loaded {
     transform: translateY(0);
+  }
+}
+
+/* Extra small screens optimization */
+@media (max-width: 480px) {
+  .hero__title { 
+    font-size: 28px; 
+    line-height: 1.25;
+    margin-bottom: 18px;
+  }
+  
+  .hero__subtitle {
+    font-size: 16px;
+    line-height: 1.5;
+    margin-bottom: 28px;
+    padding-right: 0;
+    max-width: 280px;
+  }
+  
+  .hero__inner {
+    padding: 40px 0 48px;
+  }
+  
+  .hero__actions {
+    margin-top: 28px;
+    gap: 14px;
+    max-width: 260px;
+  }
+  
+  .hero__actions .btn {
+    padding: 14px 20px;
+    font-size: 15px;
+    min-height: 48px;
+    border-radius: 10px;
+  }
+  
+  .container {
+    padding: 0 16px;
   }
 }
 </style>
