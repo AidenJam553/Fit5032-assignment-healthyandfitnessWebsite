@@ -18,7 +18,7 @@ export const useLessonsStore = defineStore('lessons', {
     lessons: load(),
     ratings: {},
     progress: {},
-    userWishlist: loadWishlist(), // 用户课单 { userId: [lessonId1, lessonId2, ...] }
+    userWishlist: loadWishlist(), // User wishlist { userId: [lessonId1, lessonId2, ...] }
   }),
   actions: {
     seedIfEmpty() {
@@ -95,7 +95,7 @@ export const useLessonsStore = defineStore('lessons', {
       this.userWishlist = {}
       this.seedData()
     },
-    // 添加课程到用户课单
+    // Add course to user wishlist
     addToWishlist(userId, lessonId) {
       if (!this.userWishlist[userId]) {
         this.userWishlist[userId] = []
@@ -105,22 +105,22 @@ export const useLessonsStore = defineStore('lessons', {
         saveWishlist(this.userWishlist)
       }
     },
-    // 从用户课单移除课程
+    // Remove course from user wishlist
     removeFromWishlist(userId, lessonId) {
       if (this.userWishlist[userId]) {
         this.userWishlist[userId] = this.userWishlist[userId].filter(id => id !== lessonId)
         saveWishlist(this.userWishlist)
       }
     },
-    // 检查课程是否在用户课单中
+    // Check if course is in user wishlist
     isInWishlist(userId, lessonId) {
       return this.userWishlist[userId]?.includes(lessonId) || false
     },
-    // 获取用户的课单
+    // Get user's wishlist
     getUserWishlist(userId) {
       return this.userWishlist[userId] || []
     },
-    // 获取用户课单的课程详情
+    // Get course details of user's wishlist
     getUserWishlistLessons(userId) {
       const wishlistIds = this.getUserWishlist(userId)
       return this.lessons.filter(lesson => wishlistIds.includes(lesson.id))

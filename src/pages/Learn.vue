@@ -9,13 +9,13 @@ const router = useRouter()
 const isLoaded = ref(false)
 const scrollY = ref(0)
 
-// 过滤状态
+// Filter state
 const activeDifficulty = ref('')
 const activeTopic = ref('')
 const searchQuery = ref('')
 
 onMounted(async () => {
-  // 强制重新加载课程数据
+  // Force reload course data
   lessons.resetData()
   
   await nextTick()
@@ -31,7 +31,7 @@ onMounted(async () => {
   window.addEventListener('scroll', handleScroll, { passive: true })
 })
 
-// 过滤后的课程
+// Filtered courses
 const filteredLessons = computed(() => {
   let filtered = lessons.lessons
 
@@ -43,7 +43,7 @@ const filteredLessons = computed(() => {
     filtered = filtered.filter(lesson => lesson.topic === activeTopic.value)
   }
 
-  // 搜索过滤
+  // Search filter
   if (searchQuery.value.trim()) {
     const query = searchQuery.value.toLowerCase()
     filtered = filtered.filter(lesson => 
@@ -56,11 +56,11 @@ const filteredLessons = computed(() => {
   return filtered
 })
 
-// 过滤器选项
+// Filter options
 const difficulties = ['Beginner', 'Intermediate', 'Advanced']
 const topics = ['Nutrition', 'Workout']
 
-// 过滤器处理函数
+// Filter handler functions
 const setDifficultyFilter = (difficulty) => {
   // For sidebar clicks - toggle behavior
   if (typeof difficulty === 'string' && activeDifficulty.value === difficulty) {
@@ -79,11 +79,11 @@ const setTopicFilter = (topic) => {
   }
 }
 
-// 检查过滤器是否激活
+// Check if filter is active
 const isDifficultyActive = (difficulty) => activeDifficulty.value === difficulty
 const isTopicActive = (topic) => activeTopic.value === topic
 
-// 获取课程统计信息
+// Get course statistics
 const courseStats = computed(() => {
   const stats = {
     total: lessons.lessons.length,
@@ -96,7 +96,7 @@ const courseStats = computed(() => {
   return stats
 })
 
-// 获取当前过滤器标题
+// Get current filter title
 const getFilterTitle = () => {
   if (activeDifficulty.value && activeTopic.value) {
     return `${activeDifficulty.value} ${activeTopic.value} Courses`
@@ -108,7 +108,7 @@ const getFilterTitle = () => {
   return 'All Courses'
 }
 
-// 获取课程简介
+// Get course description
 const getCourseDescription = (title) => {
   const descriptions = {
     'Fundamentals of Nutrition': 'Learn the basics of nutrition science, including essential nutrients, dietary guidelines, and how to make informed food choices for better health.',

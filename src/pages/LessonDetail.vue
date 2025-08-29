@@ -12,7 +12,7 @@ const user = getCurrentUser()
 
 lessons.seedIfEmpty()
 
-// 课单相关状态
+// Wishlist related state
 const isInWishlist = ref(false)
 
 const id = computed(() => route.params.id)
@@ -23,18 +23,18 @@ const lesson = computed(() => lessons.lessons.find(l => l.id === id.value) || {
   difficulty: 'Beginner'
 })
 
-// 评论和评分状态
+// Comments and rating state
 const comments = ref([])
 const newComment = ref('')
 const userRating = ref(0)
 const isLoaded = ref(false)
 const showContent = ref(false)
 
-// 论坛评论相关状态
+// Forum comment related state
 const showEmojiPicker = ref(false)
 const activeReplyId = ref(null)
 
-// Emoji 数据
+// Emoji data
 const emojiCategories = {
   'Smileys': ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳'],
   'Gestures': ['👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👋', '🤚', '🖐️', '✋', '🖖', '👏', '🙌', '🤲', '🙏', '✍️', '💪', '🦾', '🦿', '🦵', '🦶'],
@@ -43,7 +43,7 @@ const emojiCategories = {
   'Food': ['🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🫒', '🧄', '🧅', '🥔']
 }
 
-// 加载评论数据
+// Load comments data
 function loadComments() {
   const commentsKey = `lesson_comments_${id.value}`
   try {
@@ -54,17 +54,17 @@ function loadComments() {
   }
 }
 
-// 保存评论数据
+// Save comments data
 function saveComments() {
   const commentsKey = `lesson_comments_${id.value}`
   localStorage.setItem(commentsKey, JSON.stringify(comments.value))
 }
 
-// 添加评论
+// Add comment
 function addComment() {
   if (!newComment.value.trim() || !user) return
   
-  // 获取当前用户的完整信息
+  // Get current user's complete information
   const currentUser = getFullUserData(user.username || user.email)
   
   const comment = {
@@ -74,14 +74,14 @@ function addComment() {
     author: user.username || user.email,
     authorId: user.id || user.email,
     createdAt: new Date().toISOString(),
-    // 保存用户头像信息
+    // Save user avatar information
     authorAvatar: currentUser?.avatarDataUrl || null
   }
   
   comments.value.unshift(comment)
   saveComments()
   
-  // 如果用户给了评分，也保存到课程评分中
+  // If user gave a rating, also save it to course ratings
   if (userRating.value > 0) {
     lessons.rate(id.value, userRating.value)
   }
@@ -90,21 +90,21 @@ function addComment() {
   userRating.value = 0
 }
 
-// 获取课程图片
+// Get course image
 function getCourseImage() {
   const topic = lesson.value.topic?.toLowerCase()
   const difficulty = lesson.value.difficulty?.toLowerCase()
   
   if (topic === 'nutrition') {
-    return '/hero.png' // 使用现有的营养相关图片
+    return '/hero.png' // Use existing nutrition-related image
   } else if (topic === 'workout') {
-    return '/forumback.png' // 使用现有的运动相关图片
+    return '/forumback.png' // Use existing workout-related image
   }
   
-  return '/hero.png' // 默认图片
+  return '/hero.png' // Default image
 }
 
-// 获取课程介绍
+// Get course description
 function getCourseDescription() {
   const descriptions = {
     'Fundamentals of Nutrition': 'Learn the basics of nutrition science, including essential nutrients, dietary guidelines, and how to make informed food choices for better health.',
@@ -121,7 +121,7 @@ function getCourseDescription() {
   return descriptions[lesson.value.title] || 'A comprehensive course designed to help you achieve your health and fitness goals through expert guidance and practical knowledge.'
 }
 
-// 用户头像相关方法
+// User avatar related methods
 const USERS_KEY = 'users'
 
 function loadUsers() {
@@ -142,31 +142,31 @@ function getInitials(name) {
   return (name || 'U')[0]?.toUpperCase() || 'U'
 }
 
-// 获取完整用户数据
+// Get complete user data
 function getFullUserData(authorName) {
   const users = loadUsers()
   return users.find(u => u.username === authorName || u.email === authorName) || null
 }
 
-// 处理头像点击
+// Handle avatar click
 function handleAvatarClick(authorName) {
-  // 检查是否点击自己的头像
+  // Check if clicking own avatar
   const currentUser = user
   if (currentUser && (currentUser.username === authorName || currentUser.email === authorName)) {
-    // 导航到自己的个人资料
+    // Navigate to own profile
     router.push('/profile')
     return
   }
   
-  // 显示其他用户信息模态框（这里可以扩展为显示用户信息）
+  // Show other user info modal (can be expanded to show user info)
   const userData = getFullUserData(authorName)
   if (userData) {
     console.log('User data:', userData)
-    // 可以在这里添加显示用户信息的逻辑
+    // Logic for displaying user info can be added here
   }
 }
 
-// 论坛评论相关方法
+// Forum comment related methods
 function toggleEmojiPicker() {
   showEmojiPicker.value = !showEmojiPicker.value
 }
@@ -252,7 +252,7 @@ function deleteComment(comment) {
 
 function handleReply(comment) {
   if (comment.replyContent?.trim()) {
-    // 获取当前用户的完整信息
+    // Get current user's complete information
     const currentUser = getFullUserData(user.username || user.email)
     
     const reply = {
@@ -261,7 +261,7 @@ function handleReply(comment) {
       author: user.username || user.email,
       authorId: user.id || user.email,
       createdAt: new Date().toISOString(),
-      // 保存用户头像信息
+      // Save user avatar information
       authorAvatar: currentUser?.avatarDataUrl || null
     }
     
@@ -276,15 +276,15 @@ function handleReply(comment) {
   }
 }
 
-// 开始学习
+// Start learning
 function startLearning() {
   router.push({ name: 'lesson-learning', params: { id: id.value } })
 }
 
-// 课单相关方法
+// Wishlist related methods
 function toggleWishlist() {
   if (!user) {
-    // 如果用户未登录，可以提示登录或跳转到登录页面
+    // If user is not logged in, prompt login or redirect to login page
     router.push('/login')
     return
   }
@@ -307,13 +307,13 @@ onMounted(async () => {
   loadComments()
   checkWishlistStatus()
   
-  // 设置加载状态
+  // Set loading state
   isLoaded.value = true
   
-  // 确保DOM更新后再触发动画
+  // Ensure DOM is updated before triggering animations
   await nextTick()
   
-  // 使用requestAnimationFrame确保动画能正常播放
+  // Use requestAnimationFrame to ensure animations play properly
   requestAnimationFrame(() => {
     showContent.value = true
   })

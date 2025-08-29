@@ -18,13 +18,13 @@ const lesson = computed(() => lessons.lessons.find(l => l.id === id.value) || {
   difficulty: 'Beginner'
 })
 
-// 学习状态
+// Learning state
 const currentSection = ref(0)
 const isLoaded = ref(false)
 const showContent = ref(false)
 const isCompleted = ref(false)
 
-// 课程内容结构
+// Course content structure
 const courseContent = computed(() => {
   const content = {
     'Fundamentals of Nutrition': [
@@ -131,15 +131,15 @@ const courseContent = computed(() => {
   ]
 })
 
-// 当前章节
+// Current chapter
 const currentChapter = computed(() => courseContent.value[currentSection.value])
 
-// 进度百分比
+// Progress percentage
 const progressPercentage = computed(() => {
   return Math.round(((currentSection.value + 1) / courseContent.value.length) * 100)
 })
 
-// 导航函数
+// Navigation functions
 function nextSection() {
   if (currentSection.value < courseContent.value.length - 1) {
     currentSection.value++
@@ -160,24 +160,24 @@ function goToSection(index) {
   updateProgress()
 }
 
-// 更新进度
+// Update progress
 function updateProgress() {
   const progress = Math.max(lessons.progress[id.value] || 0, progressPercentage.value)
   lessons.setProgress(id.value, progress)
 }
 
-// 完成课程
+// Complete course
 function completeCourse() {
   lessons.setProgress(id.value, 100)
   isCompleted.value = true
 }
 
-// 返回课程详情
+// Return to course details
 function backToDetail() {
   router.push({ name: 'lesson-detail', params: { id: id.value } })
 }
 
-// 获取章节图标
+// Get chapter icon
 function getChapterIcon(type) {
   const icons = {
     video: '🎥',
