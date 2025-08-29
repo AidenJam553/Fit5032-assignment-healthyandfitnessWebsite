@@ -11,22 +11,22 @@ npm install
 Start both front-end (Vite) and back-end (Express with Google auth proxy):
 
 ```powershell
-$env:GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"
-$env:VITE_GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"
+$env:GOOGLE_CLIENT_ID = 85238754646-roumsc2u2pghvqd03rb6dck6ht2gnuqi.apps.googleusercontent.com
+$env:VITE_GOOGLE_CLIENT_ID = 85238754646-roumsc2u2pghvqd03rb6dck6ht2gnuqi.apps.googleusercontent.com
 npm run dev:full
 ```
 
 Front-end only:
 
 ```powershell
-$env:VITE_GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"
+$env:VITE_GOOGLE_CLIENT_ID = 85238754646-roumsc2u2pghvqd03rb6dck6ht2gnuqi.apps.googleusercontent.com
 npm run dev
 ```
 
 Back-end only:
 
 ```powershell
-$env:GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"
+$env:GOOGLE_CLIENT_ID = 85238754646-roumsc2u2pghvqd03rb6dck6ht2gnuqi.apps.googleusercontent.com
 npm run server
 ```
 
@@ -62,20 +62,20 @@ Vite will print the local URL (e.g. `http://localhost:5174`). The API runs at `h
 
 Create a `.env` file in the root directory:
 ```bash
-VITE_GOOGLE_CLIENT_ID=your-google-oauth-client-id-here
-GOOGLE_CLIENT_ID=your-google-oauth-client-id-here
+VITE_GOOGLE_CLIENT_ID=85238754646-roumsc2u2pghvqd03rb6dck6ht2gnuqi.apps.googleusercontent.com
+GOOGLE_CLIENT_ID=85238754646-roumsc2u2pghvqd03rb6dck6ht2gnuqi.apps.googleusercontent.com
 ```
 
 ## Test accounts (for demo)
 
-- **管理员账号（唯一）**: 
-  - 邮箱: `admin@admin.com`
-  - 密码: `Admin123`
-- 普通用户: 可自由注册任意邮箱（除管理员邮箱外）
+- **Admin Account (unique)**: 
+  - Email: `admin@admin.com`
+  - Password: `Admin123`
+- Regular users: Can freely register with any email (except the admin email)
 
-**注意**:
-- 管理员账号有且只有一个，系统启动时会自动创建
-- 禁止注册新的管理员账号
-- 管理员只能通过本地登录（邮箱+密码），不支持Google登录
-- 管理员登录后自动重定向到 `/admin`
-- 普通用户重定向到 `/`
+**Notes**:
+- There is only one admin account, automatically created when the system starts
+- New admin account registration is prohibited
+- Admin can only login locally (email + password), Google login is not supported
+- Admin users are automatically redirected to `/admin` after login
+- Regular users are redirected to `/`
