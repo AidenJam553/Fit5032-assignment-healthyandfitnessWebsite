@@ -2,7 +2,8 @@
 
 const USERS_KEY = 'users';
 const CURRENT_USER_KEY = 'currentUser';
-const ADMIN_EMAILS = ['admin@admin.com'];
+const ADMIN_EMAIL = 'admin@admin.com';
+const ADMIN_PASSWORD = 'Admin123'; // 默认管理员密码
 
 function loadUsers() {
   try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); } catch { return []; }
@@ -34,15 +35,42 @@ function passwordMeetsPolicy(password) {
 
 function isAdminEmail(email) {
   if (!email) return false;
-  if (ADMIN_EMAILS.includes(email.toLowerCase())) return true;
-  return /@admin\.com$/i.test(email);
+  return email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 }
+
+// 初始化默认管理员账号
+function initializeDefaultAdmin() {
+  const users = loadUsers();
+  const adminExists = users.some(u => u.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+  
+  if (!adminExists) {
+    const adminUser = {
+      id: 'admin-001',
+      username: 'Admin',
+      email: ADMIN_EMAIL,
+      provider: 'local',
+      passwordHash: btoa(ADMIN_PASSWORD),
+      role: 'admin',
+      createdAt: new Date().toISOString(),
+    };
+    users.push(adminUser);
+    saveUsers(users);
+  }
+}
+
+// 页面加载时初始化管理员账号
+initializeDefaultAdmin();
 
 export function getRedirectForEmail(email) {
   return isAdminEmail(email) ? '/admin' : '/';
 }
 
 export function registerLocal({ username, email, password }) {
+  // 禁止注册管理员账号
+  if (isAdminEmail(email)) {
+    return { ok: false, error: '管理员账号已存在，禁止注册新的管理员账号' };
+  }
+  
   const users = loadUsers();
   const existsByUsername = users.some(u => u.username?.toLowerCase() === String(username).toLowerCase());
   if (existsByUsername) {
@@ -61,7 +89,7 @@ export function registerLocal({ username, email, password }) {
     email,
     provider: 'local',
     passwordHash: btoa(password),
-    role: isAdminEmail(email) ? 'admin' : 'user',
+    role: 'user', // 普通用户只能是user角色
     createdAt: new Date().toISOString(),
   };
   users.push(user);
@@ -86,6 +114,12 @@ export function signInWithGoogle(googleEmail, googleName = null) {
     return { ok: false, error: 'Invalid Google email' };
   }
   const email = googleEmail.trim();
+  
+  // 禁止通过Google登录创建管理员账号
+  if (isAdminEmail(email)) {
+    return { ok: false, error: '管理员账号只能通过本地登录，请使用密码登录' };
+  }
+  
   const users = loadUsers();
   let user = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
   if (!user) {
@@ -96,7 +130,7 @@ export function signInWithGoogle(googleEmail, googleName = null) {
       username: username,
       email,
       provider: 'google',
-      role: isAdminEmail(email) ? 'admin' : 'user',
+      role: 'user', // Google用户只能是普通用户
       createdAt: new Date().toISOString(),
     };
     users.push(user);

@@ -11,22 +11,22 @@ npm install
 Start both front-end (Vite) and back-end (Express with Google auth proxy):
 
 ```powershell
-$env:GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"
-$env:VITE_GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"
+$env:GOOGLE_CLIENT_ID = 85238754646-roumsc2u2pghvqd03rb6dck6ht2gnuqi.apps.googleusercontent.com
+$env:VITE_GOOGLE_CLIENT_ID = 85238754646-roumsc2u2pghvqd03rb6dck6ht2gnuqi.apps.googleusercontent.com
 npm run dev:full
 ```
 
 Front-end only:
 
 ```powershell
-$env:VITE_GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"
+$env:VITE_GOOGLE_CLIENT_ID = 85238754646-roumsc2u2pghvqd03rb6dck6ht2gnuqi.apps.googleusercontent.com
 npm run dev
 ```
 
 Back-end only:
 
 ```powershell
-$env:GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID"
+$env:GOOGLE_CLIENT_ID = 85238754646-roumsc2u2pghvqd03rb6dck6ht2gnuqi.apps.googleusercontent.com
 npm run server
 ```
 
@@ -62,15 +62,20 @@ Vite will print the local URL (e.g. `http://localhost:5174`). The API runs at `h
 
 Create a `.env` file in the root directory:
 ```bash
-VITE_GOOGLE_CLIENT_ID=your-google-oauth-client-id-here
-GOOGLE_CLIENT_ID=your-google-oauth-client-id-here
+VITE_GOOGLE_CLIENT_ID=85238754646-roumsc2u2pghvqd03rb6dck6ht2gnuqi.apps.googleusercontent.com
+GOOGLE_CLIENT_ID=85238754646-roumsc2u2pghvqd03rb6dck6ht2gnuqi.apps.googleusercontent.com
 ```
 
 ## Test accounts (for demo)
 
-- Admin emails: `admin@admin.com`, or any address ending with `@admin.com`
-- User email: `user@example.com`
+- **Admin Account (unique)**: 
+  - Email: `admin@admin.com`
+  - Password: `Admin123`
+- Regular users: Can freely register with any email (except the admin email)
 
-Behavior:
-- Admin emails redirect to `/admin`
-- Others redirect to `/`
+**Notes**:
+- There is only one admin account, automatically created when the system starts
+- New admin account registration is prohibited
+- Admin can only login locally (email + password), Google login is not supported
+- Admin users are automatically redirected to `/admin` after login
+- Regular users are redirected to `/`
