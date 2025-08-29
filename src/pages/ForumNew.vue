@@ -645,7 +645,7 @@ onBeforeUnmount(() => {
   background-size: 16px;
 }
 
-/* 修复下拉选项的样式 */
+/* Fix dropdown option styles */
 .form-select option {
   background: white;
   color: var(--text-primary);

@@ -3,7 +3,7 @@
 const USERS_KEY = 'users';
 const CURRENT_USER_KEY = 'currentUser';
 const ADMIN_EMAIL = 'admin@admin.com';
-const ADMIN_PASSWORD = 'Admin123'; // 默认管理员密码
+const ADMIN_PASSWORD = 'Admin123'; // Default admin password
 
 function loadUsers() {
   try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]'); } catch { return []; }
@@ -38,7 +38,7 @@ function isAdminEmail(email) {
   return email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 }
 
-// 初始化默认管理员账号
+// Initialize default admin account
 function initializeDefaultAdmin() {
   const users = loadUsers();
   const adminExists = users.some(u => u.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase());
@@ -58,7 +58,7 @@ function initializeDefaultAdmin() {
   }
 }
 
-// 页面加载时初始化管理员账号
+// Initialize admin account when page loads
 initializeDefaultAdmin();
 
 export function getRedirectForEmail(email) {
@@ -66,9 +66,9 @@ export function getRedirectForEmail(email) {
 }
 
 export function registerLocal({ username, email, password }) {
-  // 禁止注册管理员账号
+  // Prohibit registration of admin accounts
   if (isAdminEmail(email)) {
-    return { ok: false, error: '管理员账号已存在，禁止注册新的管理员账号' };
+    return { ok: false, error: 'Admin account already exists, registration of new admin accounts is prohibited' };
   }
   
   const users = loadUsers();
@@ -89,7 +89,7 @@ export function registerLocal({ username, email, password }) {
     email,
     provider: 'local',
     passwordHash: btoa(password),
-    role: 'user', // 普通用户只能是user角色
+    role: 'user', // Regular users can only have user role
     createdAt: new Date().toISOString(),
   };
   users.push(user);
@@ -115,9 +115,9 @@ export function signInWithGoogle(googleEmail, googleName = null) {
   }
   const email = googleEmail.trim();
   
-  // 禁止通过Google登录创建管理员账号
+  // Prohibit creating admin accounts through Google login
   if (isAdminEmail(email)) {
-    return { ok: false, error: '管理员账号只能通过本地登录，请使用密码登录' };
+    return { ok: false, error: 'Admin account can only login locally, please use password login' };
   }
   
   const users = loadUsers();
@@ -130,7 +130,7 @@ export function signInWithGoogle(googleEmail, googleName = null) {
       username: username,
       email,
       provider: 'google',
-      role: 'user', // Google用户只能是普通用户
+      role: 'user', // Google users can only be regular users
       createdAt: new Date().toISOString(),
     };
     users.push(user);

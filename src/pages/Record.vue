@@ -7,13 +7,13 @@ import { useLessonsStore } from '@/lib/stores/lessons.js'
 const currentUser = ref(null)
 const lessons = useLessonsStore()
 
-// 获取用户的课单课程
+// Get user's wishlist courses
 const userWishlistLessons = computed(() => {
   if (!currentUser.value) return []
   return lessons.getUserWishlistLessons(currentUser.value.id)
 })
 
-// 计算课单进度
+// Calculate wishlist progress
 const wishlistProgress = computed(() => {
   if (!currentUser.value || userWishlistLessons.value.length === 0) return 0
   const totalProgress = userWishlistLessons.value.reduce((sum, lesson) => {
