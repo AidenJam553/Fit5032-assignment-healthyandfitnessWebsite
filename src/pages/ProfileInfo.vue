@@ -1,5 +1,6 @@
 <script setup>
 import SiteHeader from '@/components/SiteHeader.vue'
+import Button from '@/components/Button.vue'
 import { getCurrentUser, logout } from '@/lib/auth'
 import { useLessonsStore } from '@/lib/stores/lessons'
 import { useForumStore } from '@/lib/stores/forum'
@@ -60,8 +61,8 @@ function handleLogout() { logout(); router.replace('/') }
           <div class="muted">{{ view.email }}</div>
         </div>
         <div class="spacer"></div>
-        <button class="btn btn--outline" style="margin-right:8px" @click="handleLogout">Log out</button>
-        <button class="btn btn--primary" @click="edit">Edit</button>
+        <Button variant="secondary" size="medium" style="margin-right:8px" @click="handleLogout">Log out</Button>
+        <Button variant="primary" size="medium" @click="edit">Edit</Button>
       </div>
 
       <div class="grid">

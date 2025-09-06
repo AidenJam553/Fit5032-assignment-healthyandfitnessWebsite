@@ -149,58 +149,7 @@ body {
 .m-responsive-xl { margin: var(--spacing-xl); }
 .m-responsive-2xl { margin: var(--spacing-2xl); }
 
-/* buttons */
-.btn { 
-  display: inline-flex; align-items: center; justify-content: center;
-  gap: var(--spacing-sm); border-radius: var(--radius-sm);
-  border: var(--border-width-thin) solid transparent;
-  padding: 10px 16px; cursor: pointer;
-  transition: background .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease;
-  box-shadow: var(--shadow-sm);
-  min-height: var(--touch-target-min);
-  font-size: var(--font-size-base);
-  font-weight: 500;
-}
-
-/* Responsive button sizing */
-@media (max-width: 575px) {
-  .btn {
-    padding: 12px 20px;
-    font-size: var(--font-size-lg);
-    min-height: 48px;
-  }
-}
-
-@media (min-width: 576px) and (max-width: 767px) {
-  .btn {
-    padding: 10px 18px;
-    font-size: var(--font-size-base);
-  }
-}
-
-@media (min-width: 992px) {
-  .btn {
-    padding: 12px 24px;
-    font-size: var(--font-size-lg);
-  }
-}
-
-.btn--primary { background: var(--green-700); color: #fff; }
-.btn--primary:hover { background: #0f8a43; box-shadow: var(--shadow-md); }
-.btn--outline { background:#fff; color: var(--green-700); border-color: var(--green-700); }
-.btn--outline:hover { background: var(--green-50); }
-.btn--ghost { background: #fff; color: var(--green-800); border-color: var(--green-100); }
-
-/* Button variants for different screen sizes */
-.btn--mobile-full {
-  width: 100%;
-}
-
-@media (min-width: 576px) {
-  .btn--mobile-full {
-    width: auto;
-  }
-}
+/* Legacy button styles - removed to avoid conflicts with Button component */
 
 /* cards/panels */
 .card, .panel, .section { background: #fff; border: 1px solid var(--green-100); border-radius: var(--radius-md); box-shadow: var(--shadow-md); }

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { registerLocal, signInWithGoogle, getRedirectForEmail } from '@/lib/auth'
 import { useRouter } from 'vue-router'
+import Button from '@/components/Button.vue'
 
 const router = useRouter()
 const username = ref('')
@@ -203,10 +204,19 @@ onMounted(async () => {
             </div>
           </div>
 
-          <button class="btn-register animate-fade-up" :class="{ 'animate-in': showContent, 'loading': loading }" style="animation-delay: 0.8s" :disabled="loading">
-            <span v-if="!loading">Create Account</span>
-            <div v-else class="loading-spinner"></div>
-          </button>
+          <Button 
+            variant="primary" 
+            size="large" 
+            :full-width="true"
+            :loading="loading"
+            :disabled="loading"
+            @click="onSubmit"
+            class="animate-fade-up"
+            :class="{ 'animate-in': showContent }"
+            style="animation-delay: 0.8s"
+          >
+            Create Account
+          </Button>
         </form>
 
         <!-- Google Login -->
@@ -610,41 +620,7 @@ input { border: 1px solid var(--gray-200); border-radius: 8px; padding: 10px; }
   flex-shrink: 0;
 }
 
-/* Register Button */
-.btn-register {
-  width: 100%;
-  padding: 18px 24px;
-  background: linear-gradient(135deg, #059669, #10b981);
-  color: white;
-  border: none;
-  border-radius: 20px;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: var(--transition);
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 8px 20px rgba(5, 150, 105, 0.25), 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.btn-register:hover:not(:disabled) {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 32px rgba(5, 150, 105, 0.35), 0 8px 20px rgba(0, 0, 0, 0.15);
-  background: linear-gradient(135deg, #047857, #059669);
-}
-
-.btn-register:active {
-  transform: translateY(0);
-}
-
-.btn-register:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.btn-register.loading {
-  background: linear-gradient(135deg, var(--text-muted), var(--text-secondary));
-}
+/* Legacy button styles removed - now using Button component */
 
 /* Loading Spinner */
 .loading-spinner {

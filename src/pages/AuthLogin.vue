@@ -2,6 +2,7 @@
 import { ref, onMounted, nextTick } from 'vue'
 import { loginLocal, signInWithGoogle, getRedirectForEmail } from '@/lib/auth'
 import { useRouter } from 'vue-router'
+import Button from '@/components/Button.vue'
 
 const router = useRouter()
 const email = ref('')
@@ -213,10 +214,19 @@ onMounted(async () => {
     </div>
   </div>
   
-          <button class="btn-login animate-fade-up" :class="{ 'animate-in': showContent, 'loading': loading }" style="animation-delay: 0.6s" :disabled="loading">
-            <span v-if="!loading">Sign In</span>
-            <div v-else class="loading-spinner"></div>
-          </button>
+          <Button 
+            variant="primary" 
+            size="large" 
+            :full-width="true"
+            :loading="loading"
+            :disabled="loading"
+            @click="onSubmit"
+            class="animate-fade-up"
+            :class="{ 'animate-in': showContent }"
+            style="animation-delay: 0.6s"
+          >
+            Sign In
+          </Button>
         </form>
 
         <!-- Google Login -->
@@ -550,41 +560,7 @@ onMounted(async () => {
   font-size: 15px;
 }
 
-/* Login Button */
-.btn-login {
-  width: 100%;
-  padding: 18px 24px;
-  background: linear-gradient(135deg, #059669, #10b981);
-  color: white;
-  border: none;
-  border-radius: 20px;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: var(--transition);
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 8px 20px rgba(5, 150, 105, 0.25), 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.btn-login:hover:not(:disabled) {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 32px rgba(5, 150, 105, 0.35), 0 8px 20px rgba(0, 0, 0, 0.15);
-  background: linear-gradient(135deg, #047857, #059669);
-}
-
-.btn-login:active {
-  transform: translateY(0);
-}
-
-.btn-login:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.btn-login.loading {
-  background: linear-gradient(135deg, var(--text-muted), var(--text-secondary));
-}
+/* Legacy button styles removed - now using Button component */
 
 /* Loading Spinner */
 .loading-spinner {

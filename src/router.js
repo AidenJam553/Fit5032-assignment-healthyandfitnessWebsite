@@ -27,6 +27,8 @@ const AdminMapsPoi = () => import('./pages/admin/AdminMapsPoi.vue')
 const AdminTables = () => import('./pages/admin/AdminTables.vue')
 const AdminSystem = () => import('./pages/admin/AdminSystem.vue')
 const AdminAudits = () => import('./pages/admin/AdminAudits.vue')
+const CardTest = () => import('./pages/CardTest.vue')
+const ButtonTest = () => import('./pages/ButtonTest.vue')
 
 const routes = [
   { path: '/', name: 'home', component: HomePage },
@@ -53,6 +55,8 @@ const routes = [
   { path: '/admin/tables', component: AdminTables },
   { path: '/admin/system-settings', component: AdminSystem },
   { path: '/admin/audit-logs', component: AdminAudits },
+  { path: '/card-test', name: 'card-test', component: CardTest },
+  { path: '/button-test', name: 'button-test', component: ButtonTest },
 ]
 
 const router = createRouter({

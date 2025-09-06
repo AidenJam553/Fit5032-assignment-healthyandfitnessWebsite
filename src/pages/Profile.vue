@@ -1,5 +1,6 @@
 <script setup>
 import SiteHeader from '@/components/SiteHeader.vue'
+import Button from '@/components/Button.vue'
 import { reactive, computed, onMounted, ref } from 'vue'
 import { getCurrentUser } from '@/lib/auth'
 import { useRouter } from 'vue-router'
@@ -344,7 +345,7 @@ function save() {
     <SiteHeader />
     <div class="container profile">
       <div class="toolbar center">
-        <button class="btn btn--outline" @click="router.push('/profile')">← Back</button>
+        <Button variant="secondary" size="medium" @click="router.push('/profile')">← Back</Button>
         <h1 class="title">Edit Profile</h1>
       </div>
       <div class="panel">
@@ -411,7 +412,7 @@ function save() {
         <textarea v-model="form.bio" rows="3" placeholder="Tell us about yourself..." />
 
         <div class="row actions">
-          <button class="btn btn--primary" @click="save">Save</button>
+          <Button variant="primary" size="medium" @click="save">Save</Button>
         </div>
       </div>
       <div v-if="cropper.show" class="cropper-backdrop" @click.self="closeCropper">
@@ -424,8 +425,8 @@ function save() {
           </div>
           <input class="zoom" type="range" min="0.5" max="3" step="0.01" v-model.number="cropper.scale" @input="clampOffsets" />
           <div class="row actions">
-            <button class="btn btn--outline" @click="closeCropper">Cancel</button>
-            <button class="btn btn--primary" @click="confirmCrop">Use avatar</button>
+            <Button variant="secondary" size="medium" @click="closeCropper">Cancel</Button>
+            <Button variant="primary" size="medium" @click="confirmCrop">Use avatar</Button>
           </div>
         </div>
       </div>

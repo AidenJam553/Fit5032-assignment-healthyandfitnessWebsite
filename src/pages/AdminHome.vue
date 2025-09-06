@@ -1,6 +1,7 @@
 <script setup>
 import { logout } from '@/lib/auth'
 import { useRouter } from 'vue-router'
+import Button from '@/components/Button.vue'
 
 const router = useRouter()
 
@@ -16,7 +17,7 @@ function handleLogout() {
       <div class="container admin__bar-inner">
         <router-link to="/admin" class="logo">ADMIN MANAGE SYSTEM</router-link>
         <div class="admin__actions">
-          <button class="btn btn--outline" @click="handleLogout">Log out</button>
+          <Button variant="secondary" size="medium" @click="handleLogout">Log out</Button>
           <div class="chip">
             <span class="chip__avatar">A</span>
             <span>Admin</span>
@@ -111,8 +112,7 @@ function handleLogout() {
 }
 .admin__actions { display: flex; align-items: center; gap: 12px; }
 
-.btn { border: 1px solid var(--green-700); background: #fff; color: var(--green-800); padding: 8px 12px; border-radius: 8px; box-shadow: var(--shadow-sm); }
-.btn:hover { background: var(--green-50); box-shadow: var(--shadow-md); }
+/* Legacy button styles removed - now using Button component */
 .chip { display: inline-flex; align-items: center; gap: 8px; background: var(--green-50); color: var(--green-800); border: 1px solid var(--green-200); padding: 6px 10px; border-radius: 999px; box-shadow: var(--shadow-sm); }
 .chip__avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--green-600); color: white; display: grid; place-content: center; font-weight: 700; }
 

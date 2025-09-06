@@ -1,5 +1,7 @@
 <script setup>
 import SiteHeader from '@/components/SiteHeader.vue'
+import Card from '@/components/Card.vue'
+import Button from '@/components/Button.vue'
 import { useForumStore } from '@/lib/stores/forum'
 import { getCurrentUser } from '@/lib/auth'
 import { onMounted, onBeforeUnmount, ref, computed, nextTick } from 'vue'
@@ -261,12 +263,18 @@ function getEmptyMessage() {
         <div class="hero-content">
           <h1 class="hero-title animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 0.2s">Community Forum</h1>
           <p class="hero-subtitle animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 0.4s">Connect with fellow fitness enthusiasts, share your journey, and get expert advice.</p>
-          <button class="btn btn-primary animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 0.6s" @click="newPost">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 5v14M5 12h14"/>
-            </svg>
+          <Button 
+            variant="primary" 
+            size="large" 
+            icon="plus"
+            icon-path="M12 5v14M5 12h14"
+            class="animate-fade-up" 
+            :class="{ 'animate-in': isLoaded }" 
+            style="animation-delay: 0.6s" 
+            @click="newPost"
+          >
             Create New Post
-          </button>
+          </Button>
         </div>
       </div>
     </section>
@@ -343,8 +351,10 @@ function getEmptyMessage() {
                 <!-- Left Sidebar -->
         <aside class="sidebar animate-slide-left" :class="{ 'animate-in': isLoaded }" style="animation-delay: 0.8s">
           <!-- Search -->
-          <div class="sidebar-card animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.0s">
-            <h3 class="sidebar-title">Search Posts</h3>
+          <Card variant="sidebar" size="medium" class="animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.0s">
+            <template #header>
+              <h3 class="sidebar-title">Search Posts</h3>
+            </template>
             <div class="search-box">
               <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"/>
@@ -357,11 +367,13 @@ function getEmptyMessage() {
                 class="search-input"
               />
               </div>
-            </div>
+          </Card>
 
           <!-- Categories -->
-          <div class="sidebar-card animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.2s">
-            <h3 class="sidebar-title">Categories</h3>
+          <Card variant="sidebar" size="medium" class="animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.2s">
+            <template #header>
+              <h3 class="sidebar-title">Categories</h3>
+            </template>
             <ul class="category-list">
               <li 
                 v-for="(cat, index) in categories" 
@@ -378,11 +390,13 @@ function getEmptyMessage() {
                 <span class="category-count">{{ cat.count }}</span>
               </li>
             </ul>
-          </div>
+          </Card>
 
           <!-- My Posts -->
-          <div v-if="getCurrentUser()" class="sidebar-card animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.8s">
-            <h3 class="sidebar-title">My Activity</h3>
+          <Card v-if="getCurrentUser()" variant="sidebar" size="medium" class="animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.8s">
+            <template #header>
+              <h3 class="sidebar-title">My Activity</h3>
+            </template>
             <ul class="personal-list">
               <li 
                 class="personal-item animate-fade-up"
@@ -431,11 +445,13 @@ function getEmptyMessage() {
                 <span class="personal-count">{{ personalStats.bookmarks }}</span>
               </li>
             </ul>
-      </div>
+          </Card>
 
           <!-- Forum Stats -->
-          <div class="sidebar-card animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 2.0s">
-            <h3 class="sidebar-title">Community Stats</h3>
+          <Card variant="sidebar" size="medium" class="animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 2.0s">
+            <template #header>
+              <h3 class="sidebar-title">Community Stats</h3>
+            </template>
             <div class="stats-grid">
               <div class="stat-item">
                 <div class="stat-number">{{ forum.posts.length }}</div>
@@ -445,9 +461,9 @@ function getEmptyMessage() {
                 <div class="stat-number">{{ new Set(forum.posts.map(p => p.author)).size }}</div>
                 <div class="stat-label">Active Members</div>
             </div>
-          </div>
-        </div>
-      </aside>
+            </div>
+          </Card>
+        </aside>
 
                 <!-- Main Feed -->
         <main class="feed animate-slide-right" :class="{ 'animate-in': isLoaded }" style="animation-delay: 0.8s">
@@ -460,12 +476,15 @@ function getEmptyMessage() {
 
           <!-- Posts -->
           <div v-if="filteredPosts.length > 0" class="posts-list">
-            <article 
+            <Card 
               v-for="(post, index) in filteredPosts" 
               :key="post.id"
+              variant="post" 
+              size="large" 
               class="post-card animate-fade-up"
               :class="{ 'animate-in': isLoaded }"
               :style="`animation-delay: ${1.2 + index * 0.1}s`"
+              :clickable="true"
               @click="viewPost(post.id)"
             >
               <div class="post-header">
@@ -549,7 +568,7 @@ function getEmptyMessage() {
                  </div>
                  <button class="read-more-btn">Read More →</button>
         </div>
-            </article>
+            </Card>
     </div>
 
           <!-- Empty State -->
@@ -562,7 +581,7 @@ function getEmptyMessage() {
             <p class="empty-message" v-else>
               {{ searchQuery ? 'Try adjusting your search terms' : 'Be the first to start a conversation in this category!' }}
             </p>
-            <button v-if="!searchQuery && activePersonalFilter === 'all'" class="btn btn-outline" @click="newPost">Create First Post</button>
+            <Button v-if="!searchQuery && activePersonalFilter === 'all'" variant="secondary" size="medium" @click="newPost">Create First Post</Button>
           </div>
         </main>
       </div>
@@ -650,45 +669,9 @@ html {
   color: #f1f5f9;
 }
 
-/* Buttons */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 28px;
-  border-radius: 18px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: all 0.3s ease;
-  cursor: pointer;
-  border: none;
-  font-size: 15px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
+/* Legacy button styles removed - now using Button component */
 
-.btn-primary {
-  background: white;
-  color: #15803d;
-}
-
-.btn-primary:hover {
-  background: #f9fafb;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-}
-
-.btn-outline {
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color);
-}
-
-.btn-outline:hover {
-  background: white;
-  color: var(--text-primary);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-}
+/* Legacy button styles removed - now using Button component */
 
 .icon {
   width: 16px;
@@ -713,19 +696,7 @@ html {
   gap: 24px;
 }
 
-.sidebar-card {
-  background: white;
-  border-radius: 20px;
-  padding: 28px;
-  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  border: 1px solid var(--border-color);
-  transition: all 0.3s ease;
-}
-
-.sidebar-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -3px rgba(0, 0, 0, 0.1);
-}
+/* Sidebar card styles now handled by Card component */
 
 .sidebar-title {
   font-size: 1rem;
@@ -978,39 +949,7 @@ html {
   gap: 16px;
 }
 
-.post-card {
-  background: white;
-  border-radius: 24px;
-  padding: 28px;
-  box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.08), 0 3px 6px -2px rgba(0, 0, 0, 0.05);
-  border: 1px solid var(--border-color);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.post-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--primary-color), #16a34a, #059669);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.post-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 10px 20px -5px rgba(0, 0, 0, 0.1);
-  border-color: var(--primary-color);
-}
-
-.post-card:hover::before {
-  opacity: 1;
-}
+/* Post card styles now handled by Card component */
 
 .post-header {
   display: flex;
