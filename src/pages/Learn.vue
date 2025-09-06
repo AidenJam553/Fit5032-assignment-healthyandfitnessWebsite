@@ -1,5 +1,6 @@
 <script setup>
 import SiteHeader from '@/components/SiteHeader.vue'
+import Card from '@/components/Card.vue'
 import { useLessonsStore } from '@/lib/stores/lessons'
 import { onMounted, ref, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
@@ -233,8 +234,10 @@ const getCourseDescription = (title) => {
         <!-- Left Sidebar -->
         <aside class="sidebar animate-slide-left" :class="{ 'animate-in': isLoaded }" style="animation-delay: 0.8s">
           <!-- Difficulty Filter -->
-          <div class="sidebar-card animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.0s">
-            <h3 class="sidebar-title">Difficulty Level</h3>
+          <Card variant="sidebar" size="medium" class="animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.0s">
+            <template #header>
+              <h3 class="sidebar-title">Difficulty Level</h3>
+            </template>
             <ul class="filter-list">
               <li 
                 v-for="(difficulty, index) in difficulties" 
@@ -265,11 +268,13 @@ const getCourseDescription = (title) => {
                 <span class="filter-count">{{ courseStats[difficulty.toLowerCase()] }}</span>
               </li>
             </ul>
-          </div>
+          </Card>
 
           <!-- Topic Filter -->
-          <div class="sidebar-card animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.4s">
-            <h3 class="sidebar-title">Course Topics</h3>
+          <Card variant="sidebar" size="medium" class="animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.4s">
+            <template #header>
+              <h3 class="sidebar-title">Course Topics</h3>
+            </template>
             <ul class="filter-list">
               <li 
                 v-for="(topic, index) in topics" 
@@ -300,16 +305,18 @@ const getCourseDescription = (title) => {
                 <span class="filter-count">{{ courseStats[topic.toLowerCase()] }}</span>
               </li>
             </ul>
-          </div>
+          </Card>
 
                     <!-- Course Stats -->
-          <div class="sidebar-card animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.8s">
-            <h3 class="sidebar-title">
-              <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 19v-6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2zm0 0V9a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v10m-6 0a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2m0 0V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2z"/>
-              </svg>
-              Course Overview
-            </h3>
+          <Card variant="sidebar" size="medium" class="animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.8s">
+            <template #header>
+              <h3 class="sidebar-title">
+                <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 19v-6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2zm0 0V9a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v10m-6 0a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2m0 0V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2z"/>
+                </svg>
+                Course Overview
+              </h3>
+            </template>
             
             <!-- Total Courses -->
             <div class="overview-main">
@@ -378,8 +385,8 @@ const getCourseDescription = (title) => {
                 </div>
               </div>
             </div>
-        </div>
-      </aside>
+          </Card>
+        </aside>
 
         <!-- Main Feed -->
         <main class="feed animate-slide-right" :class="{ 'animate-in': isLoaded }" style="animation-delay: 0.8s">
@@ -393,12 +400,15 @@ const getCourseDescription = (title) => {
 
           <!-- Courses Grid -->
           <div v-if="filteredLessons.length > 0" class="courses-grid">
-            <article 
+            <Card 
               v-for="(course, index) in filteredLessons" 
               :key="course.id"
+              variant="post" 
+              size="large" 
               class="course-card animate-fade-up"
               :class="{ 'animate-in': isLoaded }"
               :style="`animation-delay: ${1.2 + index * 0.1}s`"
+              :clickable="true"
               @click="router.push({ name: 'lesson-detail', params: { id: course.id } })"
             >
               <div class="course-thumb" :class="`difficulty-${course.difficulty.toLowerCase()}`">
@@ -424,7 +434,7 @@ const getCourseDescription = (title) => {
                   </div>
                 </div>
             </div>
-          </article>
+          </Card>
         </div>
 
           <!-- Empty State -->
@@ -686,20 +696,11 @@ const getCourseDescription = (title) => {
   align-items: start;
 }
 
-/* Sidebar */
-.sidebar-card {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 24px;
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-sm);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.sidebar-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+/* Sidebar - styles now handled by Card component */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .sidebar-title {
@@ -956,21 +957,7 @@ const getCourseDescription = (title) => {
   gap: 24px;
 }
 
-.course-card {
-  background: #ffffff;
-  border-radius: 20px;
-  overflow: hidden;
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-sm);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-}
-
-.course-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: var(--shadow-xl);
-  border-color: var(--primary-color);
-}
+/* Course card styles now handled by Card component */
 
 .course-thumb {
   height: 160px;
@@ -980,6 +967,8 @@ const getCourseDescription = (title) => {
   align-items: center;
   justify-content: center;
   color: white;
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
 }
 
 .course-thumb.difficulty-beginner {

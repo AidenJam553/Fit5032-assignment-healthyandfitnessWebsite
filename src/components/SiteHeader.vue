@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { getCurrentUser } from '@/lib/auth'
+import Button from '@/components/Button.vue'
 
 const user = ref(null)
 const isMobileMenuOpen = ref(false)
@@ -68,7 +69,7 @@ function initialsFrom(u) {
       
       <!-- Desktop Auth Section -->
       <div class="auth-section auth-section--desktop">
-        <router-link v-if="!user" class="btn btn--outline" to="/login">Log In</router-link>
+        <Button v-if="!user" variant="secondary" size="small" tag="router-link" to="/login">Log In</Button>
         <router-link v-else class="profile-pill" to="/profile">
           <div class="avatar">
             <img v-if="userAvatar" :src="userAvatar" alt="User Avatar" class="avatar-img" />
@@ -130,9 +131,9 @@ function initialsFrom(u) {
         
         <!-- Mobile Auth Section -->
         <div class="auth-section auth-section--mobile">
-          <router-link v-if="!user" class="btn btn--primary btn--mobile-full" to="/login" @click="closeMobileMenu">
+          <Button v-if="!user" variant="primary" size="large" tag="router-link" to="/login" class="btn--mobile-full" @click="closeMobileMenu">
             Log In
-          </router-link>
+          </Button>
           <router-link v-else class="profile-pill profile-pill--mobile" to="/profile" @click="closeMobileMenu">
             <div class="avatar">
               <img v-if="userAvatar" :src="userAvatar" alt="User Avatar" class="avatar-img" />

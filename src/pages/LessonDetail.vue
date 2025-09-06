@@ -1,5 +1,6 @@
 <script setup>
 import SiteHeader from '@/components/SiteHeader.vue'
+import Button from '@/components/Button.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { computed, ref, onMounted, nextTick } from 'vue'
 import { useLessonsStore } from '@/lib/stores/lessons.js'
@@ -380,26 +381,32 @@ onMounted(async () => {
             </div>
             
             <div class="course-actions animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 1.1s">
-              <button class="btn-start-learning animate-bounce-in" :class="{ 'animate-in': showContent }" style="animation-delay: 1.2s" @click="startLearning">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
+              <Button 
+                variant="primary" 
+                size="large" 
+                icon="arrow-right"
+                icon-position="right"
+                class="animate-bounce-in" 
+                :class="{ 'animate-in': showContent }" 
+                style="animation-delay: 1.2s" 
+                @click="startLearning"
+              >
                 Start Learning
-              </button>
+              </Button>
               
-              <button 
-                class="btn-wishlist animate-bounce-in" 
-                :class="{ 'animate-in': showContent, 'in-wishlist': isInWishlist }" 
+              <Button 
+                :variant="isInWishlist ? 'warning' : 'secondary'"
+                size="large" 
+                icon="heart"
+                icon-position="left"
+                class="animate-bounce-in" 
+                :class="{ 'animate-in': showContent }" 
                 style="animation-delay: 1.3s" 
                 @click="toggleWishlist"
                 :title="isInWishlist ? 'Remove from My Courses' : 'Add to My Courses'"
               >
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path v-if="!isInWishlist" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                  <path v-else d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="currentColor"/>
-                </svg>
                 {{ isInWishlist ? 'In My Courses' : 'Add to My Courses' }}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

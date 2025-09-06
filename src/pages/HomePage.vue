@@ -1,6 +1,8 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import SiteHeader from '@/components/SiteHeader.vue'
+import Card from '@/components/Card.vue'
+import Button from '@/components/Button.vue'
 import { getCurrentUser } from '@/lib/auth'
 
 const overlayOpacity = ref(0)
@@ -76,12 +78,12 @@ onBeforeUnmount(() => {
           and become a better version of yourself.
         </p>
         <div class="hero__actions" v-if="!isLoggedIn">
-          <router-link class="btn btn--primary" to="/login">Log In</router-link>
-          <router-link class="btn btn--ghost" to="/register">Create Account</router-link>
+          <Button variant="primary" size="medium" tag="router-link" to="/login">Log In</Button>
+          <Button variant="secondary" size="medium" tag="router-link" to="/register">Create Account</Button>
         </div>
         <div class="hero__actions" v-else>
-          <router-link class="btn btn--primary" to="/learn">Start Learning</router-link>
-          <router-link class="btn btn--ghost" to="/record">Track Progress</router-link>
+          <Button variant="primary" size="medium" tag="router-link" to="/learn">Start Learning</Button>
+          <Button variant="secondary" size="medium" tag="router-link" to="/record">Track Progress</Button>
         </div>
       </div>
       <div class="hero__overlay" :style="{ opacity: overlayOpacity }"></div>
@@ -95,15 +97,23 @@ onBeforeUnmount(() => {
           <a class="section__more" href="#">View more &gt;&gt;</a>
         </div>
         <div class="card-grid">
-          <div class="card-placeholder stagger-1" aria-label="Course placeholder"></div>
-          <div class="card-placeholder stagger-2" aria-label="Course placeholder"></div>
-          <div class="card-placeholder stagger-3" aria-label="Course placeholder"></div>
+          <Card variant="elevated" size="large" class="stagger-1" clickable hover>
+            <div class="card-placeholder" aria-label="Course placeholder"></div>
+          </Card>
+          <Card variant="elevated" size="large" class="stagger-2" clickable hover>
+            <div class="card-placeholder" aria-label="Course placeholder"></div>
+          </Card>
+          <Card variant="elevated" size="large" class="stagger-3" clickable hover>
+            <div class="card-placeholder" aria-label="Course placeholder"></div>
+          </Card>
         </div>
       </section>
 
       <section class="section two-col animate-on-scroll">
-        <div class="panel stagger-1">
-          <h3 class="panel__title">My Record</h3>
+        <Card variant="default" size="medium" class="stagger-1" clickable hover>
+          <template #header>
+            <h3 class="panel__title">My Record</h3>
+          </template>
           <ul class="list-placeholder">
             <li></li>
             <li></li>
@@ -111,14 +121,16 @@ onBeforeUnmount(() => {
             <li></li>
             <li></li>
           </ul>
-        </div>
+        </Card>
 
-        <div class="panel explore stagger-2">
-          <h3 class="panel__title">Explore</h3>
+        <Card variant="default" size="medium" class="explore stagger-2" clickable hover>
+          <template #header>
+            <h3 class="panel__title">Explore</h3>
+          </template>
           <div class="explore__grid">
             <div class="map-card">
               <div class="map-card__icon">🗺️</div>
-              <button class="btn btn--ghost">Find a gym &gt;</button>
+              <Button variant="secondary" size="medium">Find a gym &gt;</Button>
             </div>
             <ul class="list-placeholder">
               <li></li>
@@ -128,7 +140,7 @@ onBeforeUnmount(() => {
               <li></li>
             </ul>
           </div>
-        </div>
+        </Card>
       </section>
     </main>
 
@@ -201,15 +213,7 @@ onBeforeUnmount(() => {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   transform: translateY(0);
 }
-.btn:hover { 
-  background: #0f8a43; 
-  box-shadow: 0 6px 20px rgba(0,0,0,0.15); 
-  transform: translateY(-2px);
-}
-.btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-}
+/* Legacy button styles removed - now using Button component */
 .btn:focus { outline: 2px solid var(--green-500); outline-offset: 2px; }
 
 .btn--outline {
@@ -217,7 +221,7 @@ onBeforeUnmount(() => {
   color: var(--green-700);
   border-color: var(--green-700);
 }
-.btn--outline:hover { background: var(--green-50); }
+/* Legacy button styles removed - now using Button component */
 
 .btn--ghost {
   background: white;
@@ -323,15 +327,7 @@ onBeforeUnmount(() => {
   background: var(--green-100);
   border-radius: 12px;
   height: 160px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-}
-
-.card-placeholder:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-  background: linear-gradient(135deg, var(--green-100), #e8f5e8);
 }
 
 .two-col {
@@ -339,21 +335,6 @@ onBeforeUnmount(() => {
   grid-template-columns: 1fr 1fr;
   gap: 20px;
   margin-top: 20px;
-}
-.panel { 
-  background: #ffffff; 
-  border: 1px solid var(--green-100); 
-  border-radius: 12px; 
-  padding: 16px; 
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08); 
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-}
-
-.panel:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.12);
-  border-color: var(--green-200);
 }
 .panel__title { margin: 0 0 12px 0; font-size: 18px; }
 
