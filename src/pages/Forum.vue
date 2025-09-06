@@ -622,7 +622,7 @@ html {
 
 /* Hero Section */
 .hero {
-  background: url('/forumback.png') center/cover no-repeat;
+  background: url('/forum_back.jpg') center/cover no-repeat;
   color: white;
   padding: 80px 0 100px 0;
   text-align: center;

@@ -469,8 +469,38 @@ const getCourseDescription = (title) => {
 }
 
 .page {
-  background: #f0fdf4;
+  background: url('/learn_wback.jpg') center/cover no-repeat;
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   min-height: 100vh;
+  position: relative;
+}
+
+.page::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('/learn_wback.jpg') center/cover no-repeat;
+  background-attachment: fixed;
+  filter: blur(8px);
+  opacity: 0.3;
+  z-index: -1;
+}
+
+.page::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.85);
+  z-index: -1;
 }
 
 .container {
@@ -481,7 +511,7 @@ const getCourseDescription = (title) => {
 
 /* Hero Section */
 .hero {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: url('/leaning_back.jpg') center/cover no-repeat;
   color: white;
   padding: 80px 0;
   text-align: center;
@@ -687,6 +717,8 @@ const getCourseDescription = (title) => {
 /* Main Content */
 .main-content {
   padding: 48px 0;
+  position: relative;
+  z-index: 1;
 }
 
 .content-grid {
