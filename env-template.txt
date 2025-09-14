@@ -1,0 +1,31 @@
+# Firebase Configuration
+VITE_FIREBASE_API_KEY=your_firebase_api_key_here
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
+VITE_FIREBASE_APP_ID=your_app_id_here
+
+# Google OAuth Configuration
+VITE_GOOGLE_CLIENT_ID=your_google_client_id_here
+GOOGLE_CLIENT_ID=your_google_client_id_here
+
+# API Configuration
+VITE_API_URL=http://localhost:5175/api
+
+# Google OAuth Configuration
+VITE_GOOGLE_CLIENT_ID=85238754646-roumsc2u2pghvqd03rb6dck6ht2gnuqi.apps.googleusercontent.com
+GOOGLE_CLIENT_ID=85238754646-roumsc2u2pghvqd03rb6dck6ht2gnuqi.apps.googleusercontent.com
+
+# Note: Both variables are needed - VITE_ for frontend, plain for backend
+# Firebase Configuration
+VITE_FIREBASE_API_KEY=AIzaSyDZqgFcjZoezN7uTbLfCcpe4XJLfCjidA4
+VITE_FIREBASE_AUTH_DOMAIN=fit5032-46960.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=fit5032-46960
+VITE_FIREBASE_STORAGE_BUCKET=fit5032-46960.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=932482057735
+VITE_FIREBASE_APP_ID=1:932482057735:web:a6213d43e47a7bbf278ca2
+
+
+# API Configuration
+VITE_API_URL=http://localhost:5175/api

@@ -16,11 +16,16 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.2",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "firebase": "^12.2.1",
     "google-auth-library": "^10.2.1",
+    "helmet": "^8.1.0",
+    "node-fetch": "^3.3.2",
     "pinia": "^2.3.1",
     "vue": "^3.5.18",
     "vue-router": "^4.5.1"

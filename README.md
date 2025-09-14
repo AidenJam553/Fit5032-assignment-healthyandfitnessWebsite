@@ -66,11 +66,72 @@ VITE_GOOGLE_CLIENT_ID=85238754646-roumsc2u2pghvqd03rb6dck6ht2gnuqi.apps.googleus
 GOOGLE_CLIENT_ID=85238754646-roumsc2u2pghvqd03rb6dck6ht2gnuqi.apps.googleusercontent.com
 ```
 
+## Environment Variables
+
+Create a `.env` file in the root directory with the following variables:
+
+```bash
+# Firebase Configuration
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
+VITE_FIREBASE_APP_ID=your_app_id
+
+# Google OAuth Configuration
+VITE_GOOGLE_CLIENT_ID=your_google_client_id_here
+GOOGLE_CLIENT_ID=your_google_client_id_here
+
+# API Configuration
+VITE_API_URL=http://localhost:5175/api
+```
+
+## Firebase Setup
+
+### Step-by-step instructions:
+
+1. **Go to Firebase Console**: https://console.firebase.google.com/
+2. **Create a new project** or select existing project
+3. **Enable Firestore Database**:
+   - Go to "Firestore Database" in the left sidebar
+   - Click "Create database"
+   - Choose "Start in test mode" for development
+   - Select a location for your database
+4. **Get your configuration**:
+   - Go to Project Settings (gear icon)
+   - Scroll down to "Your apps" section
+   - Click "Add app" and select Web app
+   - Copy the configuration object
+   - Replace the values in your `.env` file
+5. **Set up security rules** (for production):
+   - Go to "Firestore Database" → "Rules"
+   - Update rules to secure your data
+
+### Firebase Collections Structure
+
+The app uses the following Firestore collections:
+- `users` - User profiles and authentication data
+- `posts` - Forum posts and discussions
+- `comments` - Post comments and replies
+- `lessons` - Course content and metadata
+- `progress` - User learning progress
+- `records` - User health and fitness records
+- `wishlist` - User course wishlists
+
+## Security Features
+
+- **Secure Password Hashing**: Uses bcrypt with salt rounds for password storage
+- **Server-side Authentication**: All authentication is handled on the server
+- **No Hardcoded Passwords**: Admin credentials are configurable via environment variables
+- **Password Policy**: Enforces strong passwords (6+ chars, upper, lower, number)
+- **Input Validation**: Server-side validation for all authentication requests
+
 ## Test accounts (for demo)
 
 - **Admin Account (unique)**: 
-  - Email: `admin@admin.com`
-  - Password: `Admin123`
+  - Email: `admin1@admin.com` (configurable via ADMIN_EMAIL)
+  - Password: `admin1234A` (configurable via ADMIN_PASSWORD)
 - Regular users: Can freely register with any email (except the admin email)
 
 **Notes**:
@@ -79,3 +140,4 @@ GOOGLE_CLIENT_ID=85238754646-roumsc2u2pghvqd03rb6dck6ht2gnuqi.apps.googleusercon
 - Admin can only login locally (email + password), Google login is not supported
 - Admin users are automatically redirected to `/admin` after login
 - Regular users are redirected to `/`
+- **IMPORTANT**: Change the admin credentials in production by setting ADMIN_EMAIL and ADMIN_PASSWORD environment variables

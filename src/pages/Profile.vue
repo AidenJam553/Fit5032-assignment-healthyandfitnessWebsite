@@ -2,33 +2,64 @@
 import SiteHeader from '@/components/SiteHeader.vue'
 import Button from '@/components/Button.vue'
 import { reactive, computed, onMounted, ref } from 'vue'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser, getUserProfile, updateUserProfile } from '@/lib/auth'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-const USERS_KEY = 'users'
-const CURRENT_USER_KEY = 'currentUser'
-function loadUsers() { try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]') } catch { return [] } }
-function saveUsers(arr) { localStorage.setItem(USERS_KEY, JSON.stringify(arr)) }
-function setCurrentUser(u) { localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(u)) }
-
 const current = getCurrentUser()
-const users = loadUsers()
-const full = users.find(u => (u.id && current?.id) ? u.id === current.id : u.email === current?.email) || {}
+const loading = ref(false)
+const error = ref('')
 
 const form = reactive({
-  avatarDataUrl: full.avatarDataUrl || '',
-  username: full.username || current?.username || '',
-  email: full.email || current?.email || '',
-  phone: full.phone || '',
-  dob: full.dob || '',
-  gender: full.gender || 'Other',
-  weightKg: full.weightKg ?? 0,
-  heightCm: full.heightCm ?? 0,
-  bmrKcal: full.bmrKcal ?? 0,
-  bio: full.bio || '',
-  region: full.region || '',
+  avatarDataUrl: '',
+  username: '',
+  email: '',
+  phone: '',
+  dob: '',
+  gender: 'Other',
+  weightKg: 0,
+  heightCm: 0,
+  bmrKcal: 0,
+  bio: '',
+  region: '',
+})
+
+// Load user profile data
+async function loadProfile() {
+  if (!current?.id) {
+    error.value = 'User not found'
+    return
+  }
+  
+  loading.value = true
+  try {
+    const result = await getUserProfile(current.id)
+    if (result.ok) {
+      const user = result.user
+      form.avatarDataUrl = user.avatarDataUrl || ''
+      form.username = user.username || ''
+      form.email = user.email || ''
+      form.phone = user.phone || ''
+      form.dob = user.dob || ''
+      form.gender = user.gender || 'Other'
+      form.weightKg = user.weightKg ?? 0
+      form.heightCm = user.heightCm ?? 0
+      form.bmrKcal = user.bmrKcal ?? 0
+      form.bio = user.bio || ''
+      form.region = user.region || ''
+    } else {
+      error.value = result.error || 'Failed to load profile'
+    }
+  } catch (err) {
+    error.value = 'Network error'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadProfile()
 })
 
 const age = computed(() => {
@@ -298,8 +329,6 @@ function onKeydown(e) {
 function validate() {
   const name = String(form.username || '').trim()
   if (name.length < 2) return 'Username is too short'
-  const dup = loadUsers().some(u => (u.id !== full.id) && String(u.username || '').toLowerCase() === name.toLowerCase())
-  if (dup) return 'Username already exists'
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email || '')) return 'Invalid email'
   if (Number(form.weightKg) < 0) return 'Weight cannot be negative'
   if (Number(form.heightCm) < 0) return 'Height cannot be negative'
@@ -307,35 +336,49 @@ function validate() {
   return ''
 }
 
-function save() {
+async function save() {
   const err = validate()
-  if (err) { alert(err); return }
+  if (err) { 
+    error.value = err
+    return 
+  }
+
+  if (!current?.id) {
+    error.value = 'User not found'
+    return
+  }
 
   autoBmr()
+  loading.value = true
+  error.value = ''
 
-  const all = loadUsers()
-  const idx = all.findIndex(u => (u.id && current?.id) ? u.id === current.id : u.email === current?.email)
-  const merged = {
-    ...all[idx],
-    ...current,
-    username: form.username.trim(),
-    email: form.email.trim(),
-    phone: form.phone,
-    dob: form.dob,
-    gender: form.gender,
-    weightKg: Number(form.weightKg) || 0,
-    heightCm: Number(form.heightCm) || 0,
-    bmrKcal: Number(form.bmrKcal) || 0,
-    bio: form.bio,
-    region: form.region,
-    avatarDataUrl: form.avatarDataUrl,
+  try {
+    const profileData = {
+      username: form.username.trim(),
+      email: form.email.trim(),
+      phone: form.phone,
+      dob: form.dob,
+      gender: form.gender,
+      weightKg: Number(form.weightKg) || 0,
+      heightCm: Number(form.heightCm) || 0,
+      bmrKcal: Number(form.bmrKcal) || 0,
+      bio: form.bio,
+      region: form.region,
+      avatarDataUrl: form.avatarDataUrl,
+    }
+
+    const result = await updateUserProfile(current.id, profileData)
+    
+    if (result.ok) {
+      router.replace('/profile')
+    } else {
+      error.value = result.error || 'Failed to save profile'
+    }
+  } catch (err) {
+    error.value = 'Network error'
+  } finally {
+    loading.value = false
   }
-  if (idx >= 0) all[idx] = merged; else all.push(merged)
-  saveUsers(all)
-
-  // keep header pill in sync
-  setCurrentUser({ id: merged.id, email: merged.email, username: merged.username, role: merged.role })
-  router.replace('/profile')
 }
 
 </script>
@@ -412,7 +455,24 @@ function save() {
         <textarea v-model="form.bio" rows="3" placeholder="Tell us about yourself..." />
 
         <div class="row actions">
-          <Button variant="primary" size="medium" @click="save">Save</Button>
+          <Button 
+            variant="primary" 
+            size="medium" 
+            :loading="loading"
+            :disabled="loading"
+            @click="save"
+          >
+            {{ loading ? 'Saving...' : 'Save' }}
+          </Button>
+        </div>
+        
+        <div v-if="error" class="error-message">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+          {{ error }}
         </div>
       </div>
       <div v-if="cropper.show" class="cropper-backdrop" @click.self="closeCropper">
@@ -464,6 +524,26 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--green-500);
 .viewport .mask { position: absolute; inset: 0; pointer-events: none; }
 .viewport .mask .circle { border-radius: 50%; outline: 2000px solid rgba(0,0,0,.35); outline-offset: -2000px; box-shadow: 0 0 0 4px #22c55e inset; }
 .zoom { width: 100%; }
+
+/* Error Message */
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  margin-top: 16px;
+}
+
+.error-message svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
 </style>
 
 
