@@ -1,30 +1,39 @@
 <script setup>
 import SiteHeader from '@/components/SiteHeader.vue'
 import { useRoute, useRouter } from 'vue-router'
-import { computed, ref, onMounted, nextTick } from 'vue'
+import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useLessonsStore } from '@/lib/stores/lessons'
+import { getCurrentUser } from '@/lib/auth'
 
 const route = useRoute()
 const router = useRouter()
 const lessons = useLessonsStore()
+const user = getCurrentUser()
 
-lessons.seedIfEmpty()
+// Set current user in store
+if (user) {
+  lessons.setCurrentUser(user)
+}
 
 const id = computed(() => route.params.id)
-const lesson = computed(() => lessons.lessons.find(l => l.id === id.value) || { 
-  title: 'Course Not Found', 
-  minutes: 0, 
-  topic: 'Unknown',
-  difficulty: 'Beginner'
+const lesson = computed(() => {
+  const allCourses = lessons.courses || []
+  const courses = Array.isArray(allCourses) ? allCourses : []
+  return courses.find(l => l.id === id.value) || { 
+    title: 'Course Not Found', 
+    minutes: 0, 
+    topic: 'Unknown',
+    difficulty: 'Beginner'
+  }
 })
 
-// 学习状态
+// Learning state
 const currentSection = ref(0)
 const isLoaded = ref(false)
 const showContent = ref(false)
 const isCompleted = ref(false)
 
-// 课程内容结构
+// Course content structure
 const courseContent = computed(() => {
   const content = {
     'Fundamentals of Nutrition': [
@@ -131,15 +140,15 @@ const courseContent = computed(() => {
   ]
 })
 
-// 当前章节
+// Current chapter
 const currentChapter = computed(() => courseContent.value[currentSection.value])
 
-// 进度百分比
+// Progress percentage
 const progressPercentage = computed(() => {
   return Math.round(((currentSection.value + 1) / courseContent.value.length) * 100)
 })
 
-// 导航函数
+// Navigation functions
 function nextSection() {
   if (currentSection.value < courseContent.value.length - 1) {
     currentSection.value++
@@ -160,24 +169,34 @@ function goToSection(index) {
   updateProgress()
 }
 
-// 更新进度
-function updateProgress() {
-  const progress = Math.max(lessons.progress[id.value] || 0, progressPercentage.value)
-  lessons.setProgress(id.value, progress)
+// Update progress
+async function updateProgress() {
+  if (!user) return
+  
+  const progress = Math.max(lessons.getCourseProgress(id.value) || 0, progressPercentage.value)
+  await lessons.saveProgress(user.id || user.email, id.value, { 
+    progressPercentage: progress 
+  })
 }
 
-// 完成课程
-function completeCourse() {
-  lessons.setProgress(id.value, 100)
+// Complete course
+async function completeCourse() {
+  if (!user) return
+  
+  await lessons.saveProgress(user.id || user.email, id.value, { 
+    progressPercentage: 100,
+    isCompleted: true,
+    completionDate: new Date()
+  })
   isCompleted.value = true
 }
 
-// 返回课程详情
+// Return to course details
 function backToDetail() {
   router.push({ name: 'lesson-detail', params: { id: id.value } })
 }
 
-// 获取章节图标
+// Get chapter icon
 function getChapterIcon(type) {
   const icons = {
     video: '🎥',
@@ -188,6 +207,19 @@ function getChapterIcon(type) {
 }
 
 onMounted(async () => {
+  // Initialize courses if needed
+  await lessons.initializeCourses()
+  
+  // Start real-time listeners
+  if (user) {
+    lessons.startRealtimeListeners()
+  }
+  
+  // Load user progress if logged in
+  if (user) {
+    await lessons.loadProgress(user.id || user.email)
+  }
+  
   await nextTick()
   setTimeout(() => {
     isLoaded.value = true
@@ -195,6 +227,11 @@ onMounted(async () => {
   setTimeout(() => {
     showContent.value = true
   }, 300)
+})
+
+// Cleanup listeners on unmount
+onUnmounted(() => {
+  lessons.stopRealtimeListeners()
 })
 </script>
 

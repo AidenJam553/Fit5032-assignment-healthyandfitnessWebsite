@@ -1,7 +1,9 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
-import { registerLocal, signInWithGoogle, getRedirectForEmail } from '@/lib/auth'
+import { registerLocal, signInWithGoogle, getRedirectForEmail, getPasswordStrength } from '@/lib/auth'
 import { useRouter } from 'vue-router'
+import Button from '@/components/Button.vue'
+import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator.vue'
 
 const router = useRouter()
 const username = ref('')
@@ -15,18 +17,25 @@ const showContent = ref(false)
 
 const passwordPolicyOk = computed(() => {
   const p = password.value
+  // 最低要求：必须包含数字、大写字母和小写字母
   return p.length >= 6 && /[a-z]/.test(p) && /[A-Z]/.test(p) && /\d/.test(p)
 })
 
 async function onSubmit() {
   error.value = ''
   if (password.value !== confirmPassword.value) { error.value = 'Passwords do not match'; return }
-  if (!passwordPolicyOk.value) { error.value = 'Password must be 6+ chars with lower, upper, number'; return }
+  if (!passwordPolicyOk.value) { 
+    const strength = getPasswordStrength(password.value)
+    error.value = strength.message
+    return 
+  }
   loading.value = true
-  const res = registerLocal({ username: username.value, email: email.value, password: password.value })
+  const res = await registerLocal({ username: username.value, email: email.value, password: password.value })
   loading.value = false
   if (!res.ok) { error.value = res.error; return }
-  router.push(getRedirectForEmail(email.value))
+  
+  // 注册成功后重定向到登录页面
+  router.push('/login')
 }
 
 function renderGoogle() {
@@ -62,11 +71,11 @@ async function handleGoogleResponse(response) {
     if (!email) { error.value = 'Failed to get email from Google'; return }
     
     // Use the signInWithGoogle function to handle user creation/login
-    const authResult = signInWithGoogle(email, name)
+    const authResult = await signInWithGoogle(email, name)
     if (!authResult.ok) { error.value = authResult.error; return }
     
-    // Redirect to appropriate page
-    router.push(getRedirectForEmail(email))
+    // Google登录成功后重定向到首页（因为Google登录是直接登录，不需要再登录）
+    router.push('/')
   } catch (e) {
     error.value = 'Network error'
   }
@@ -181,13 +190,27 @@ onMounted(async () => {
               </svg>
               <input v-model="password" type="password" required class="form-input" placeholder="Create a strong password" />
             </div>
-            <div class="password-policy" :class="{ 'policy-ok': passwordPolicyOk }">
-              <svg class="policy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path v-if="passwordPolicyOk" d="M9 12l2 2 4-4"/>
-                <circle v-else cx="12" cy="12" r="10"/>
-                <path v-if="!passwordPolicyOk" d="M12 8v4M12 16h.01"/>
-              </svg>
-              6+ chars with uppercase, lowercase & number
+            <PasswordStrengthIndicator 
+              :password="password" 
+              :show-details="false"
+            />
+            <div class="password-requirements" v-if="password">
+              <div class="requirement-item" :class="{ 'met': password.length >= 6 }">
+                <span class="requirement-icon">{{ password.length >= 6 ? '✓' : '✗' }}</span>
+                At least 6 characters
+              </div>
+              <div class="requirement-item" :class="{ 'met': /[a-z]/.test(password) }">
+                <span class="requirement-icon">{{ /[a-z]/.test(password) ? '✓' : '✗' }}</span>
+                Lowercase letter
+              </div>
+              <div class="requirement-item" :class="{ 'met': /[A-Z]/.test(password) }">
+                <span class="requirement-icon">{{ /[A-Z]/.test(password) ? '✓' : '✗' }}</span>
+                Uppercase letter
+              </div>
+              <div class="requirement-item" :class="{ 'met': /\d/.test(password) }">
+                <span class="requirement-icon">{{ /\d/.test(password) ? '✓' : '✗' }}</span>
+                Number
+              </div>
             </div>
           </div>
 
@@ -203,10 +226,19 @@ onMounted(async () => {
             </div>
           </div>
 
-          <button class="btn-register animate-fade-up" :class="{ 'animate-in': showContent, 'loading': loading }" style="animation-delay: 0.8s" :disabled="loading">
-            <span v-if="!loading">Create Account</span>
-            <div v-else class="loading-spinner"></div>
-          </button>
+          <Button 
+            variant="primary" 
+            size="large" 
+            :full-width="true"
+            :loading="loading"
+            :disabled="loading"
+            @click="onSubmit"
+            class="animate-fade-up"
+            :class="{ 'animate-in': showContent }"
+            style="animation-delay: 0.8s"
+          >
+            Create Account
+          </Button>
         </form>
 
         <!-- Google Login -->
@@ -610,41 +642,7 @@ input { border: 1px solid var(--gray-200); border-radius: 8px; padding: 10px; }
   flex-shrink: 0;
 }
 
-/* Register Button */
-.btn-register {
-  width: 100%;
-  padding: 18px 24px;
-  background: linear-gradient(135deg, #059669, #10b981);
-  color: white;
-  border: none;
-  border-radius: 20px;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: var(--transition);
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 8px 20px rgba(5, 150, 105, 0.25), 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.btn-register:hover:not(:disabled) {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 32px rgba(5, 150, 105, 0.35), 0 8px 20px rgba(0, 0, 0, 0.15);
-  background: linear-gradient(135deg, #047857, #059669);
-}
-
-.btn-register:active {
-  transform: translateY(0);
-}
-
-.btn-register:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.btn-register.loading {
-  background: linear-gradient(135deg, var(--text-muted), var(--text-secondary));
-}
+/* Legacy button styles removed - now using Button component */
 
 /* Loading Spinner */
 .loading-spinner {
@@ -771,6 +769,38 @@ input { border: 1px solid var(--gray-200); border-radius: 8px; padding: 10px; }
 .animate-in {
   opacity: 1;
   transform: translate(0, 0);
+}
+
+/* 密码要求提示框样式 */
+.password-requirements {
+  margin-top: 16px;
+  padding: 12px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.requirement-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+  color: #6c757d;
+}
+
+.requirement-item:last-child {
+  margin-bottom: 0;
+}
+
+.requirement-item.met {
+  color: #28a745;
+}
+
+.requirement-icon {
+  margin-right: 8px;
+  font-weight: bold;
+  width: 16px;
+  text-align: center;
 }
 
 @keyframes shake {

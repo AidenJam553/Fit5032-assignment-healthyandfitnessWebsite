@@ -1,7 +1,11 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
-import { loginLocal, signInWithGoogle, getRedirectForEmail } from '@/lib/auth'
+import { loginLocal, signInWithGoogle, getRedirectForUser } from '@/lib/auth'
 import { useRouter } from 'vue-router'
+import Button from '@/components/Button.vue'
+import SecureInput from '@/components/SecureInput.vue'
+import { createSimpleGoogleLoginButton, handleSimpleGoogleCallback } from '@/lib/simpleGoogleAuth'
+import { sanitizeInput, validateEmail } from '@/lib/security'
 
 const router = useRouter()
 const email = ref('')
@@ -14,19 +18,27 @@ const showContent = ref(false)
 async function onSubmit() {
   error.value = ''
   loading.value = true
-  const res = loginLocal({ email: email.value, password: password.value })
-  loading.value = false
-  if (!res.ok) { error.value = res.error; return }
-  router.push(getRedirectForEmail(email.value))
-}
-
-function renderGoogle() {
-  const gi = window.google && window.google.accounts && window.google.accounts.id
-  if (!gi) {
-    console.log('Google Identity Services not available')
+  
+  // 输入验证和清理
+  const cleanEmail = sanitizeInput(email.value)
+  const cleanPassword = sanitizeInput(password.value)
+  
+  // 验证邮箱格式
+  if (!validateEmail(cleanEmail)) {
+    error.value = 'Please enter a valid email address'
+    loading.value = false
     return
   }
   
+  const res = await loginLocal({ email: cleanEmail, password: cleanPassword })
+  loading.value = false
+  if (!res.ok) { error.value = res.error; return }
+  
+  // 根据用户角色重定向
+  router.push(getRedirectForUser(res.user))
+}
+
+function renderGoogle() {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
   console.log('Google Client ID:', clientId ? 'Set' : 'Not set')
   
@@ -37,17 +49,8 @@ function renderGoogle() {
   }
   
   try {
-    gi.initialize({ 
-      client_id: clientId, 
-      callback: handleGoogleResponse,
-      auto_select: false,
-      cancel_on_tap_outside: true
-    })
-    gi.renderButton(document.getElementById('googleBtn'), { 
-      theme: 'outline', 
-      size: 'large',
-      width: '100%'
-    })
+    // 使用简化的Google登录实现
+    createSimpleGoogleLoginButton('googleBtn', clientId)
   } catch (err) {
     console.error('Google initialization error:', err)
     showGoogleSetupMessage()
@@ -109,8 +112,8 @@ async function handleGoogleResponse(response) {
     const authResult = signInWithGoogle(email, name)
     if (!authResult.ok) { error.value = authResult.error; return }
     
-    // Redirect to appropriate page
-    router.push(getRedirectForEmail(email))
+    // Redirect to appropriate page based on user role
+    router.push(getRedirectForUser(authResult.user))
   } catch (e) {
     error.value = 'Network error'
   }
@@ -136,7 +139,25 @@ function loadGisAndRender() {
 }
 
 onMounted(async () => { 
-  loadGisAndRender()
+  // 检查是否有Google OAuth回调
+  const callback = await handleSimpleGoogleCallback()
+  if (callback.success && callback.user) {
+    // Google OAuth登录成功
+    console.log('Google OAuth login successful:', callback.user)
+    error.value = ''
+    
+    // 重定向用户到主页或管理页面
+    const redirectPath = getRedirectForUser(callback.user)
+    router.push(redirectPath)
+    return
+  } else if (callback.error) {
+    // Google OAuth登录失败
+    console.error('Google OAuth login failed:', callback.error)
+    error.value = `Google login failed: ${callback.error}`
+  } else {
+    // 正常加载Google登录
+    loadGisAndRender()
+  }
   
   // Trigger animations
   await nextTick()
@@ -188,9 +209,19 @@ onMounted(async () => {
           <p class="auth-subtitle">Sign in to your account</p>
         </div>
 
+        <!-- Google Login -->
+        <div class="google-container animate-slide-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.4s">
+          <div id="googleBtn" class="google-btn-wrapper"></div>
+        </div>
+
+        <!-- Divider -->
+        <div class="divider animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.5s">
+          <span>or</span>
+        </div>
+
         <!-- Form -->
         <form @submit.prevent="onSubmit" class="auth-form">
-          <div class="form-group animate-slide-left" :class="{ 'animate-in': showContent }" style="animation-delay: 0.4s">
+          <div class="form-group animate-slide-left" :class="{ 'animate-in': showContent }" style="animation-delay: 0.6s">
             <label class="form-label">Email Address</label>
             <div class="input-container">
               <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -201,7 +232,7 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="form-group animate-slide-right" :class="{ 'animate-in': showContent }" style="animation-delay: 0.5s">
+          <div class="form-group animate-slide-right" :class="{ 'animate-in': showContent }" style="animation-delay: 0.7s">
             <label class="form-label">Password</label>
             <div class="input-container">
               <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -210,23 +241,23 @@ onMounted(async () => {
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
               </svg>
               <input v-model="password" type="password" required class="form-input" placeholder="Enter your password" />
-    </div>
-  </div>
+            </div>
+          </div>
   
-          <button class="btn-login animate-fade-up" :class="{ 'animate-in': showContent, 'loading': loading }" style="animation-delay: 0.6s" :disabled="loading">
-            <span v-if="!loading">Sign In</span>
-            <div v-else class="loading-spinner"></div>
-          </button>
+          <Button 
+            variant="primary" 
+            size="large" 
+            :full-width="true"
+            :loading="loading"
+            :disabled="loading"
+            @click="onSubmit"
+            class="animate-fade-up"
+            :class="{ 'animate-in': showContent }"
+            style="animation-delay: 0.8s"
+          >
+            Sign In
+          </Button>
         </form>
-
-        <!-- Google Login -->
-        <div class="divider animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.7s">
-          <span>or</span>
-        </div>
-
-        <div class="google-container animate-slide-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.8s">
-          <div id="googleBtn" class="google-btn-wrapper"></div>
-        </div>
 
         <!-- Footer -->
         <div class="card-footer animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.9s">
@@ -550,41 +581,7 @@ onMounted(async () => {
   font-size: 15px;
 }
 
-/* Login Button */
-.btn-login {
-  width: 100%;
-  padding: 18px 24px;
-  background: linear-gradient(135deg, #059669, #10b981);
-  color: white;
-  border: none;
-  border-radius: 20px;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: var(--transition);
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 8px 20px rgba(5, 150, 105, 0.25), 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.btn-login:hover:not(:disabled) {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 32px rgba(5, 150, 105, 0.35), 0 8px 20px rgba(0, 0, 0, 0.15);
-  background: linear-gradient(135deg, #047857, #059669);
-}
-
-.btn-login:active {
-  transform: translateY(0);
-}
-
-.btn-login:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.btn-login.loading {
-  background: linear-gradient(135deg, var(--text-muted), var(--text-secondary));
-}
+/* Legacy button styles removed - now using Button component */
 
 /* Loading Spinner */
 .loading-spinner {

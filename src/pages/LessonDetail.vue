@@ -1,7 +1,8 @@
 <script setup>
 import SiteHeader from '@/components/SiteHeader.vue'
+import Button from '@/components/Button.vue'
 import { useRoute, useRouter } from 'vue-router'
-import { computed, ref, onMounted, nextTick } from 'vue'
+import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useLessonsStore } from '@/lib/stores/lessons.js'
 import { getCurrentUser } from '@/lib/auth'
 
@@ -10,31 +11,50 @@ const router = useRouter()
 const lessons = useLessonsStore()
 const user = getCurrentUser()
 
-lessons.seedIfEmpty()
+// Set current user in store
+if (user) {
+  lessons.setCurrentUser(user)
+}
 
-// 课单相关状态
+// Wishlist related state
 const isInWishlist = ref(false)
 
 const id = computed(() => route.params.id)
-const lesson = computed(() => lessons.lessons.find(l => l.id === id.value) || { 
-  title: 'Course Not Found', 
-  minutes: 0, 
-  topic: 'Unknown',
-  difficulty: 'Beginner'
+const lesson = computed(() => {
+  const allCourses = lessons.courses || []
+  const courses = Array.isArray(allCourses) ? allCourses : []
+  return courses.find(l => l.id === id.value) || { 
+    title: 'Course Not Found', 
+    minutes: 0, 
+    topic: 'Unknown',
+    difficulty: 'Beginner'
+  }
 })
 
-// 评论和评分状态
+// Computed properties for rating display
+const courseRating = computed(() => {
+  const ratingData = lessons.ratings[id.value]
+  if (!ratingData) return { average: 0, count: 0 }
+  return {
+    average: ratingData.average || 0,
+    count: ratingData.count || 0
+  }
+})
+
+// Comments and rating state
 const comments = ref([])
 const newComment = ref('')
 const userRating = ref(0)
 const isLoaded = ref(false)
 const showContent = ref(false)
+const userHasRated = ref(false)
+const existingUserRating = ref(0)
 
-// 论坛评论相关状态
+// Forum comment related state
 const showEmojiPicker = ref(false)
 const activeReplyId = ref(null)
 
-// Emoji 数据
+// Emoji data
 const emojiCategories = {
   'Smileys': ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳'],
   'Gestures': ['👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👋', '🤚', '🖐️', '✋', '🖖', '👏', '🙌', '🤲', '🙏', '✍️', '💪', '🦾', '🦿', '🦵', '🦶'],
@@ -43,68 +63,281 @@ const emojiCategories = {
   'Food': ['🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶️', '🫑', '🌽', '🥕', '🫒', '🧄', '🧅', '🥔']
 }
 
-// 加载评论数据
-function loadComments() {
-  const commentsKey = `lesson_comments_${id.value}`
+// Check if user has already rated this course
+async function checkUserRating() {
+  if (!user) return
+  
   try {
-    const savedComments = JSON.parse(localStorage.getItem(commentsKey) || '[]')
-    comments.value = savedComments
-  } catch {
+    // Import courseRatingService directly
+    const { courseRatingService } = await import('@/lib/firebaseService.js')
+    const result = await courseRatingService.getUserRating(id.value, user.id || user.email)
+    if (result) {
+      userHasRated.value = true
+      existingUserRating.value = result.rating
+      userRating.value = result.rating
+    } else {
+      userHasRated.value = false
+      existingUserRating.value = 0
+      userRating.value = 0
+    }
+  } catch (error) {
+    console.error('Error checking user rating:', error)
+    userHasRated.value = false
+    existingUserRating.value = 0
+    userRating.value = 0
+  }
+}
+
+// Get user display name from userId
+function getUserDisplayName(userId) {
+  // If it's the current user, use their name
+  if (user && (user.id === userId || user.email === userId)) {
+    return user.username || user.email || 'You'
+  }
+  
+  // For other users, try to extract a readable name from email or use a fallback
+  if (userId && userId.includes('@')) {
+    return userId.split('@')[0] // Use email prefix as display name
+  }
+  
+  // Fallback to a generic name
+  return `User ${userId?.slice(-4) || 'Unknown'}`
+}
+
+// Debug function to check rating data
+async function debugRatingData() {
+  console.log('=== Debug Rating Data ===')
+  console.log('Course ID:', id.value)
+  console.log('Current user:', user?.id || user?.email)
+  console.log('Ratings in store:', lessons.ratings[id.value])
+  console.log('Average rating:', lessons.averageRating(id.value))
+  console.log('Rating count:', lessons.ratingCount(id.value))
+  
+  // Try to fetch ratings directly from Firebase
+  try {
+    const { courseRatingService } = await import('@/lib/firebaseService.js')
+    const ratings = await courseRatingService.getCourseRatings(id.value)
+    const average = await courseRatingService.getAverageRating(id.value)
+    console.log('Direct Firebase ratings:', ratings)
+    console.log('Direct Firebase average:', average)
+    
+    // Check if there are any ratings in the database at all
+    const { collection, getDocs } = await import('firebase/firestore')
+    const { db } = await import('@/lib/firebase.js')
+    const allRatingsSnapshot = await getDocs(collection(db, 'course_ratings'))
+    const allRatings = allRatingsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    console.log('All ratings in database:', allRatings)
+    
+    // Check if there are any ratings for this specific course
+    const courseRatings = allRatings.filter(rating => rating.courseId === id.value)
+    console.log('Ratings for this course:', courseRatings)
+    
+  } catch (error) {
+    console.error('Error fetching direct Firebase data:', error)
+  }
+  console.log('=== End Debug ===')
+}
+
+// Load comments data from Firebase
+async function loadComments() {
+  try {
+    await lessons.loadCourseComments(id.value)
+    const courseComments = lessons.comments[id.value] || []
+    
+    comments.value = courseComments.map(comment => ({
+      id: comment.id,
+      content: comment.comment || '',
+      author: getUserDisplayName(comment.userId),
+      authorId: comment.userId,
+      createdAt: comment.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+      authorAvatar: null // This should be loaded from user data
+    }))
+  } catch (error) {
+    console.error('Error loading comments:', error)
     comments.value = []
   }
 }
 
-// 保存评论数据
-function saveComments() {
-  const commentsKey = `lesson_comments_${id.value}`
-  localStorage.setItem(commentsKey, JSON.stringify(comments.value))
-}
-
-// 添加评论
-function addComment() {
-  if (!newComment.value.trim() || !user) return
+// Submit rating only (separate from comments)
+async function submitRating() {
+  if (!user) return
   
-  // 获取当前用户的完整信息
-  const currentUser = getFullUserData(user.username || user.email)
-  
-  const comment = {
-    id: crypto.randomUUID(),
-    content: newComment.value.trim(),
-    rating: userRating.value,
-    author: user.username || user.email,
-    authorId: user.id || user.email,
-    createdAt: new Date().toISOString(),
-    // 保存用户头像信息
-    authorAvatar: currentUser?.avatarDataUrl || null
+  if (!userRating.value || userRating.value < 1) {
+    alert('Please select a rating (1-5 stars) before submitting.')
+    return
   }
   
-  comments.value.unshift(comment)
-  saveComments()
-  
-  // 如果用户给了评分，也保存到课程评分中
-  if (userRating.value > 0) {
-    lessons.rate(id.value, userRating.value)
+  try {
+    // Add or update rating to Firebase (without comment)
+    const result = await lessons.addRating(
+      id.value, 
+      user.id || user.email, 
+      userRating.value, 
+      '' // Empty comment for rating only
+    )
+    
+    if (result.ok) {
+      // Mark as rated
+      userHasRated.value = true
+      existingUserRating.value = userRating.value
+      
+      // Reload ratings to get updated data
+      await lessons.loadCourseRatings(id.value)
+      
+      // Force reactivity update
+      await nextTick()
+      
+      // Debug: log current rating data
+      console.log('Rating data after submission:', {
+        courseId: id.value,
+        ratings: lessons.ratings[id.value],
+        average: lessons.averageRating(id.value),
+        count: lessons.ratingCount(id.value)
+      })
+      
+      // Show success feedback
+      const message = userHasRated.value ? 'Rating updated successfully!' : 'Rating submitted successfully!'
+      showSuccessFeedback(message)
+      
+    } else {
+      console.error('Failed to submit rating:', result.error)
+      alert('Failed to submit rating. Please try again.')
+    }
+  } catch (error) {
+    console.error('Error submitting rating:', error)
+    alert('An error occurred. Please try again.')
   }
-  
-  newComment.value = ''
-  userRating.value = 0
 }
 
-// 获取课程图片
+// Clear user's rating
+async function clearRating() {
+  if (!user) return
+  
+  if (!confirm('Are you sure you want to clear your rating?')) {
+    return
+  }
+  
+  try {
+    // Delete rating from Firebase
+    const result = await lessons.deleteRating(id.value, user.id || user.email)
+    
+    if (result.ok) {
+      // Mark as not rated
+      userHasRated.value = false
+      existingUserRating.value = 0
+      userRating.value = 0
+      
+      // Reload ratings to get updated data
+      await lessons.loadCourseRatings(id.value)
+      
+      // Force reactivity update
+      await nextTick()
+      
+      // Show success feedback
+      showSuccessFeedback('Rating cleared successfully!')
+      
+    } else {
+      console.error('Failed to clear rating:', result.error)
+      alert('Failed to clear rating. Please try again.')
+    }
+  } catch (error) {
+    console.error('Error clearing rating:', error)
+    alert('An error occurred. Please try again.')
+  }
+}
+
+// Add comment only (separate from rating)
+async function addComment() {
+  if (!user) return
+  
+  if (!newComment.value.trim()) {
+    alert('Please enter a comment before submitting.')
+    return
+  }
+  
+  try {
+    // Debug: check if addComment method exists
+    console.log('lessons object:', lessons)
+    console.log('addComment method:', typeof lessons.addComment)
+    
+    if (typeof lessons.addComment !== 'function') {
+      console.error('addComment method not found on lessons store')
+      alert('Comment functionality is not available. Please refresh the page.')
+      return
+    }
+    
+    // Add comment to Firebase (without rating)
+    const result = await lessons.addComment(
+      id.value, 
+      user.id || user.email, 
+      newComment.value.trim()
+    )
+    
+    if (result.ok) {
+      // Reload comments to get updated data
+      await loadComments()
+      
+      // Show success feedback
+      showSuccessFeedback('Comment posted successfully!')
+      
+      // Clear form
+      newComment.value = ''
+    } else {
+      console.error('Failed to add comment:', result.error)
+      alert('Failed to post comment. Please try again.')
+    }
+  } catch (error) {
+    console.error('Error adding comment:', error)
+    alert('An error occurred. Please try again.')
+  }
+}
+
+// Show success feedback
+function showSuccessFeedback(message = 'Success!') {
+  // Add a temporary success message
+  const successMessage = document.createElement('div')
+  successMessage.className = 'success-feedback'
+  successMessage.textContent = message
+  successMessage.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #10b981;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    animation: slideInRight 0.3s ease;
+  `
+  document.body.appendChild(successMessage)
+  
+  // Remove after 3 seconds
+  setTimeout(() => {
+    successMessage.style.animation = 'slideOutRight 0.3s ease'
+    setTimeout(() => {
+      if (successMessage.parentNode) {
+        successMessage.parentNode.removeChild(successMessage)
+      }
+    }, 300)
+  }, 3000)
+}
+
+// Get course image
 function getCourseImage() {
   const topic = lesson.value.topic?.toLowerCase()
   const difficulty = lesson.value.difficulty?.toLowerCase()
   
   if (topic === 'nutrition') {
-    return '/hero.png' // 使用现有的营养相关图片
+    return '/hero.png' // Use existing nutrition-related image
   } else if (topic === 'workout') {
-    return '/forumback.png' // 使用现有的运动相关图片
+    return '/forumback.png' // Use existing workout-related image
   }
   
-  return '/hero.png' // 默认图片
+  return '/hero.png' // Default image
 }
 
-// 获取课程介绍
+// Get course description
 function getCourseDescription() {
   const descriptions = {
     'Fundamentals of Nutrition': 'Learn the basics of nutrition science, including essential nutrients, dietary guidelines, and how to make informed food choices for better health.',
@@ -121,7 +354,7 @@ function getCourseDescription() {
   return descriptions[lesson.value.title] || 'A comprehensive course designed to help you achieve your health and fitness goals through expert guidance and practical knowledge.'
 }
 
-// 用户头像相关方法
+// User avatar related methods
 const USERS_KEY = 'users'
 
 function loadUsers() {
@@ -142,31 +375,31 @@ function getInitials(name) {
   return (name || 'U')[0]?.toUpperCase() || 'U'
 }
 
-// 获取完整用户数据
+// Get complete user data
 function getFullUserData(authorName) {
   const users = loadUsers()
   return users.find(u => u.username === authorName || u.email === authorName) || null
 }
 
-// 处理头像点击
+// Handle avatar click
 function handleAvatarClick(authorName) {
-  // 检查是否点击自己的头像
+  // Check if clicking own avatar
   const currentUser = user
   if (currentUser && (currentUser.username === authorName || currentUser.email === authorName)) {
-    // 导航到自己的个人资料
+    // Navigate to own profile
     router.push('/profile')
     return
   }
   
-  // 显示其他用户信息模态框（这里可以扩展为显示用户信息）
+  // Show other user info modal (can be expanded to show user info)
   const userData = getFullUserData(authorName)
   if (userData) {
     console.log('User data:', userData)
-    // 可以在这里添加显示用户信息的逻辑
+    // Logic for displaying user info can be added here
   }
 }
 
-// 论坛评论相关方法
+// Forum comment related methods
 function toggleEmojiPicker() {
   showEmojiPicker.value = !showEmojiPicker.value
 }
@@ -232,91 +465,186 @@ function cancelEdit(comment) {
   comment.editContent = ''
 }
 
-function saveComment(comment) {
+async function saveComment(comment) {
   if (comment.editContent?.trim()) {
-    comment.content = comment.editContent.trim()
-    comment.editedAt = new Date().toISOString()
-    comment.isEditing = false
-    comment.editContent = ''
-    saveComments()
+    try {
+      // Update comment in Firebase
+      const result = await lessons.updateComment(comment.id, comment.editContent.trim())
+      
+      if (result.ok) {
+        // Update local comment
+        comment.content = comment.editContent.trim()
+        comment.editedAt = new Date().toISOString()
+        comment.isEditing = false
+        comment.editContent = ''
+        
+        // Show success feedback
+        showSuccessFeedback('Comment updated successfully!')
+      } else {
+        console.error('Failed to update comment:', result.error)
+        alert('Failed to update comment. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error updating comment:', error)
+      alert('An error occurred. Please try again.')
+    }
   }
 }
 
-function deleteComment(comment) {
-  const index = comments.value.findIndex(c => c.id === comment.id)
-  if (index > -1) {
-    comments.value.splice(index, 1)
-    saveComments()
+async function deleteComment(comment) {
+  if (!confirm('Are you sure you want to delete this comment?')) {
+    return
+  }
+  
+  try {
+    // Delete comment from Firebase
+    const result = await lessons.deleteComment(comment.id)
+    
+    if (result.ok) {
+      // Remove from local comments array
+      const index = comments.value.findIndex(c => c.id === comment.id)
+      if (index > -1) {
+        comments.value.splice(index, 1)
+      }
+      
+      // Show success feedback
+      showSuccessFeedback('Comment deleted successfully!')
+    } else {
+      console.error('Failed to delete comment:', result.error)
+      alert('Failed to delete comment. Please try again.')
+    }
+  } catch (error) {
+    console.error('Error deleting comment:', error)
+    alert('An error occurred. Please try again.')
   }
 }
 
-function handleReply(comment) {
+async function handleReply(comment) {
   if (comment.replyContent?.trim()) {
-    // 获取当前用户的完整信息
-    const currentUser = getFullUserData(user.username || user.email)
-    
-    const reply = {
-      id: crypto.randomUUID(),
-      content: comment.replyContent.trim(),
-      author: user.username || user.email,
-      authorId: user.id || user.email,
-      createdAt: new Date().toISOString(),
-      // 保存用户头像信息
-      authorAvatar: currentUser?.avatarDataUrl || null
+    try {
+      // Add reply to Firebase
+      const result = await lessons.addCommentReply(comment.id, comment.replyContent.trim())
+      
+      if (result.ok) {
+        // Get current user's complete information
+        const currentUser = getFullUserData(user.username || user.email)
+        
+        const reply = {
+          id: result.id,
+          content: comment.replyContent.trim(),
+          author: user.username || user.email,
+          authorId: user.id || user.email,
+          createdAt: new Date().toISOString(),
+          // Save user avatar information
+          authorAvatar: currentUser?.avatarDataUrl || null
+        }
+        
+        if (!comment.replies) {
+          comment.replies = []
+        }
+        comment.replies.push(reply)
+        comment.isReplying = false
+        comment.replyContent = ''
+        activeReplyId.value = null
+        
+        // Show success feedback
+        showSuccessFeedback('Reply posted successfully!')
+      } else {
+        console.error('Failed to post reply:', result.error)
+        alert('Failed to post reply. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error posting reply:', error)
+      alert('An error occurred. Please try again.')
     }
-    
-    if (!comment.replies) {
-      comment.replies = []
-    }
-    comment.replies.push(reply)
-    comment.isReplying = false
-    comment.replyContent = ''
-    activeReplyId.value = null
-    saveComments()
   }
 }
 
-// 开始学习
+// Start learning
 function startLearning() {
   router.push({ name: 'lesson-learning', params: { id: id.value } })
 }
 
-// 课单相关方法
-function toggleWishlist() {
+// Wishlist related methods
+async function toggleWishlist() {
   if (!user) {
-    // 如果用户未登录，可以提示登录或跳转到登录页面
+    // If user is not logged in, prompt login or redirect to login page
     router.push('/login')
     return
   }
   
-  if (isInWishlist.value) {
-    lessons.removeFromWishlist(user.id, id.value)
-  } else {
-    lessons.addToWishlist(user.id, id.value)
+  try {
+    if (isInWishlist.value) {
+      await lessons.removeFromWishlist(user.id || user.email, id.value)
+    } else {
+      await lessons.addToWishlist(user.id || user.email, id.value)
+    }
+    isInWishlist.value = !isInWishlist.value
+  } catch (error) {
+    console.error('Error toggling wishlist:', error)
   }
-  isInWishlist.value = !isInWishlist.value
 }
 
-function checkWishlistStatus() {
+async function checkWishlistStatus() {
   if (user) {
-    isInWishlist.value = lessons.isInWishlist(user.id, id.value)
+    // Load user's wishlist first
+    await lessons.loadWishlist(user.id || user.email)
+    isInWishlist.value = lessons.isInWishlist(user.id || user.email, id.value)
   }
 }
 
 onMounted(async () => {
-  loadComments()
-  checkWishlistStatus()
+  // Initialize courses if needed
+  await lessons.initializeCourses()
   
-  // 设置加载状态
-  isLoaded.value = true
+  // Load course ratings first
+  await lessons.loadCourseRatings(id.value)
   
-  // 确保DOM更新后再触发动画
+  // Force reactivity update after loading ratings
   await nextTick()
   
-  // 使用requestAnimationFrame确保动画能正常播放
+  // Start real-time listeners
+  if (user) {
+    lessons.startRealtimeListeners()
+    lessons.listenToCourseRatings(id.value)
+  }
+  
+  // Load comments and wishlist status
+  await loadComments()
+  await checkWishlistStatus()
+  
+  // Check if user has already rated this course
+  if (user) {
+    await checkUserRating()
+    await lessons.loadProgress(user.id || user.email)
+  }
+  
+  // Set loading state
+  isLoaded.value = true
+  
+  // Debug rating data
+  await debugRatingData()
+  
+  // Additional debug for rating display
+  console.log('Final rating data check:')
+  console.log('Course ID:', id.value)
+  console.log('Ratings object:', lessons.ratings)
+  console.log('Course ratings:', lessons.ratings[id.value])
+  console.log('Average rating getter:', lessons.averageRating(id.value))
+  console.log('Rating count getter:', lessons.ratingCount(id.value))
+  
+  // Ensure DOM is updated before triggering animations
+  await nextTick()
+  
+  // Use requestAnimationFrame to ensure animations play properly
   requestAnimationFrame(() => {
     showContent.value = true
   })
+})
+
+// Cleanup listeners on unmount
+onUnmounted(() => {
+  lessons.stopListeningToCourseRatings(id.value)
 })
 </script>
 
@@ -364,7 +692,22 @@ onMounted(async () => {
                 <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
-                <span><strong>{{ (lessons.averageRating(id) || 0).toFixed(1) }}</strong> (<strong>{{ (lessons.ratings[id] || []).length }}</strong> ratings)</span>
+                <div class="rating-display">
+                  <div class="stars-display">
+                    <span 
+                      v-for="i in 5" 
+                      :key="i" 
+                      class="star-display" 
+                      :class="{ 'filled': i <= Math.round(courseRating.average) }"
+                    >
+                      ★
+                    </span>
+                  </div>
+                  <span class="rating-text">
+                    <strong>{{ courseRating.average.toFixed(1) }}</strong> 
+                    (based on <strong>{{ courseRating.count }}</strong> ratings)
+                  </span>
+                </div>
               </div>
               
               <div class="meta-item animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 1.0s">
@@ -375,31 +718,37 @@ onMounted(async () => {
                   <path d="M12 3c0 1-1 2-2 2s-2-1-2-2 1-2 2-2 2 1 2 2z"/>
                   <path d="M12 21c0-1 1-2 2-2s2 1 2 2-1 2-2 2-2-1-2-2z"/>
                 </svg>
-                <span><strong>{{ lessons.progress[id] || 0 }}%</strong> complete</span>
+                <span><strong>{{ lessons.progress[id]?.progressPercentage || 0 }}%</strong> complete</span>
               </div>
             </div>
             
             <div class="course-actions animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 1.1s">
-              <button class="btn-start-learning animate-bounce-in" :class="{ 'animate-in': showContent }" style="animation-delay: 1.2s" @click="startLearning">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
+              <Button 
+                variant="primary" 
+                size="large" 
+                icon="arrow-right"
+                icon-position="right"
+                class="animate-bounce-in" 
+                :class="{ 'animate-in': showContent }" 
+                style="animation-delay: 1.2s" 
+                @click="startLearning"
+              >
                 Start Learning
-              </button>
+              </Button>
               
-              <button 
-                class="btn-wishlist animate-bounce-in" 
-                :class="{ 'animate-in': showContent, 'in-wishlist': isInWishlist }" 
+              <Button 
+                :variant="isInWishlist ? 'warning' : 'secondary'"
+                size="large" 
+                icon="heart"
+                icon-position="left"
+                class="animate-bounce-in" 
+                :class="{ 'animate-in': showContent }" 
                 style="animation-delay: 1.3s" 
                 @click="toggleWishlist"
                 :title="isInWishlist ? 'Remove from My Courses' : 'Add to My Courses'"
               >
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path v-if="!isInWishlist" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                  <path v-else d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill="currentColor"/>
-                </svg>
                 {{ isInWishlist ? 'In My Courses' : 'Add to My Courses' }}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -418,17 +767,17 @@ onMounted(async () => {
                   <path 
                     class="progress-fill" 
                     d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    :stroke-dasharray="`${(lessons.progress[id] || 0) * 1.1}, 100`"
+                    :stroke-dasharray="`${(lessons.progress[id]?.progressPercentage || 0) * 1.1}, 100`"
                   />
                 </svg>
-                <div class="progress-text animate-fade-in" :class="{ 'animate-in': showContent }" style="animation-delay: 1.0s">{{ lessons.progress[id] || 0 }}%</div>
+                <div class="progress-text animate-fade-in" :class="{ 'animate-in': showContent }" style="animation-delay: 1.0s">{{ lessons.progress[id]?.progressPercentage || 0 }}%</div>
               </div>
               <div class="progress-info">
                 <h4 class="animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.9s">Course Progress</h4>
                 <p class="progress-description animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 1.0s">You're making great progress! Keep going to complete this course.</p>
                 <div class="progress-bar-container animate-slide-right" :class="{ 'animate-in': showContent }" style="animation-delay: 1.1s">
                   <div class="progress-bar">
-                    <div class="progress-bar-fill animate-progress-fill" :class="{ 'animate-in': showContent }" style="animation-delay: 1.2s" :style="{ '--progress-width': `${lessons.progress[id] || 0}%` }"></div>
+                    <div class="progress-bar-fill animate-progress-fill" :class="{ 'animate-in': showContent }" style="animation-delay: 1.2s" :style="{ '--progress-width': `${lessons.progress[id]?.progressPercentage || 0}%` }"></div>
                   </div>
                 </div>
               </div>
@@ -437,21 +786,47 @@ onMounted(async () => {
 
           <!-- Rating Section -->
           <div class="rating-section animate-slide-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.6s">
-            <h3 class="section-title animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.7s">Rate This Course</h3>
+            <h3 class="section-title animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.7s">
+              {{ userHasRated ? 'Your Rating' : 'Rate This Course' }}
+            </h3>
             <div class="rating-card animate-scale-in" :class="{ 'animate-in': showContent }" style="animation-delay: 0.8s">
               <div class="rating-stars animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 0.9s">
                 <span 
                   v-for="i in 5" 
                   :key="i" 
                   class="star animate-star-in" 
-                  :class="{ 'filled': i <= userRating, 'animate-in': showContent }"
+                  :class="{ 
+                    'filled': i <= userRating, 
+                    'animate-in': showContent
+                  }"
                   :style="{ animationDelay: `${0.9 + i * 0.1}s` }"
                   @click="userRating = i"
                 >
                   ★
                 </span>
               </div>
-              <p class="rating-text animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 1.4s">Click the stars to rate this course</p>
+              <p class="rating-text animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 1.4s">
+                {{ userHasRated ? `You rated this course ${userRating}/5 stars` : 'Click the stars to rate this course' }}
+              </p>
+              <div v-if="userHasRated" class="rating-status animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 1.5s">
+                <span class="status-badge">✓ Rated</span>
+              </div>
+              <div class="rating-actions animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 1.6s">
+                <button
+                  class="submit-rating-btn"
+                  @click="submitRating"
+                  :disabled="!userRating || userRating < 1"
+                >
+                  {{ userHasRated ? 'Update Rating' : 'Submit Rating' }}
+                </button>
+                <button
+                  v-if="userHasRated"
+                  class="clear-rating-btn"
+                  @click="clearRating"
+                >
+                  Clear Rating
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -513,24 +888,10 @@ onMounted(async () => {
               </div>
               
               <div class="comment-actions animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 1.3s">
-                <div class="comment-rating animate-slide-right" :class="{ 'animate-in': showContent }" style="animation-delay: 1.4s">
-                  <span>Rate: </span>
-                  <span
-                    v-for="i in 5"
-                    :key="i"
-                    class="star small animate-star-in"
-                    :class="{ 'filled': i <= userRating, 'animate-in': showContent }"
-                    :style="{ animationDelay: `${1.4 + i * 0.05}s` }"
-                    @click="userRating = i"
-                  >
-                    ★
-                  </span>
-                  <span class="rating-fraction animate-fade-in" :class="{ 'animate-in': showContent }" style="animation-delay: 1.7s">{{ userRating }}/5</span>
-                </div>
                 <button
                   class="submit-comment-btn animate-bounce-in"
                   :class="{ 'animate-in': showContent }"
-                  style="animation-delay: 1.8s"
+                  style="animation-delay: 1.4s"
                   @click="addComment"
                   :disabled="!newComment.trim()"
                 >
@@ -1077,6 +1438,123 @@ onMounted(async () => {
 .rating-text {
   color: var(--text-secondary);
   margin: 0;
+}
+
+/* Enhanced Rating Display */
+.rating-display {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.stars-display {
+  display: flex;
+  gap: 4px;
+}
+
+.star-display {
+  font-size: 1.2rem;
+  color: #d1d5db;
+  transition: color 0.2s ease;
+}
+
+.star-display.filled {
+  color: #fbbf24;
+}
+
+.star.disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.rating-status {
+  margin-top: 12px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #10b981;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.rating-actions {
+  margin-top: 16px;
+  text-align: center;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.submit-rating-btn {
+  background: #16a34a;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.submit-rating-btn:hover:not(:disabled) {
+  background: #15803d;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.submit-rating-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.clear-rating-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-rating-btn:hover {
+  background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Success Feedback Animations */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
 }
 
 /* Comments Section */

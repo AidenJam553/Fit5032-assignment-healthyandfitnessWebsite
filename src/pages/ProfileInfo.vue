@@ -1,41 +1,86 @@
 <script setup>
 import SiteHeader from '@/components/SiteHeader.vue'
-import { getCurrentUser, logout } from '@/lib/auth'
+import Button from '@/components/Button.vue'
+import { getCurrentUser, logout, getUserProfile } from '@/lib/auth'
 import { useLessonsStore } from '@/lib/stores/lessons'
 import { useForumStore } from '@/lib/stores/forum'
 import { useRecordsStore } from '@/lib/stores/records'
 import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
 
 const router = useRouter()
 const current = getCurrentUser()
+const loading = ref(false)
+const error = ref('')
 
 // stores for achievements
 const lessons = useLessonsStore()
 const forum = useForumStore()
 const records = useRecordsStore()
-lessons.seedIfEmpty()
-forum.seedIfEmpty()
-records.loadPersisted && records.loadPersisted()
 
-const USERS_KEY = 'users'
-function loadUsers() { try { return JSON.parse(localStorage.getItem(USERS_KEY) || '[]') } catch { return [] } }
-const users = loadUsers()
-const full = users.find(u => (u.id && current?.id) ? u.id === current.id : u.email === current?.email) || {}
-
-const view = {
-  avatarDataUrl: full.avatarDataUrl || '',
-  username: full.username || current?.username || 'User',
-  email: full.email || current?.email || '',
-  phone: full.phone || '',
-  dob: full.dob || '',
-  gender: full.gender || 'Other',
-  weightKg: full.weightKg ?? null,
-  heightCm: full.heightCm ?? null,
-  bmrKcal: full.bmrKcal ?? null,
-  bio: full.bio || '',
-  region: full.region || '',
-  role: current?.role || full.role || 'user',
+// Initialize stores
+lessons.initializeCourses()
+if (forum.seedIfEmpty) {
+  forum.seedIfEmpty()
 }
+if (records.loadPersisted) {
+  records.loadPersisted()
+}
+
+const view = ref({
+  avatarDataUrl: '',
+  username: current?.username || 'User',
+  email: current?.email || '',
+  phone: '',
+  dob: '',
+  gender: 'Other',
+  weightKg: null,
+  heightCm: null,
+  bmrKcal: null,
+  bio: '',
+  region: '',
+  role: current?.role || 'user',
+})
+
+// Load user profile data
+async function loadProfile() {
+  if (!current?.id) {
+    error.value = 'User not found'
+    return
+  }
+  
+  loading.value = true
+  try {
+    const result = await getUserProfile(current.id)
+    if (result.ok) {
+      const user = result.user
+      view.value = {
+        avatarDataUrl: user.avatarDataUrl || '',
+        username: user.username || current?.username || 'User',
+        email: user.email || current?.email || '',
+        phone: user.phone || '',
+        dob: user.dob || '',
+        gender: user.gender || 'Other',
+        weightKg: user.weightKg ?? null,
+        heightCm: user.heightCm ?? null,
+        bmrKcal: user.bmrKcal ?? null,
+        bio: user.bio || '',
+        region: user.region || '',
+        role: user.role || current?.role || 'user',
+      }
+    } else {
+      error.value = result.error || 'Failed to load profile'
+    }
+  } catch (err) {
+    error.value = 'Network error'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadProfile()
+})
 
 function calcAge(dob) {
   if (!dob) return ''
@@ -60,8 +105,17 @@ function handleLogout() { logout(); router.replace('/') }
           <div class="muted">{{ view.email }}</div>
         </div>
         <div class="spacer"></div>
-        <button class="btn btn--outline" style="margin-right:8px" @click="handleLogout">Log out</button>
-        <button class="btn btn--primary" @click="edit">Edit</button>
+        <Button variant="secondary" size="medium" style="margin-right:8px" @click="handleLogout">Log out</Button>
+        <Button variant="primary" size="medium" @click="edit">Edit</Button>
+      </div>
+      
+      <div v-if="error" class="error-message">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="15" y1="9" x2="9" y2="15"/>
+          <line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>
+        {{ error }}
       </div>
 
       <div class="grid">
@@ -74,8 +128,8 @@ function handleLogout() { logout(); router.replace('/') }
         <div class="card">
           <h3>Achievements</h3>
           <ul class="achv">
-            <li><span>Lessons taken</span><b>{{ lessons.lessons.length }}</b></li>
-            <li><span>Avg course rating</span><b>{{ (lessons.lessons.length && Object.keys(lessons.ratings).length) ? '★' : '—' }}</b></li>
+            <li><span>Lessons taken</span><b>{{ (lessons.courses || []).length }}</b></li>
+            <li><span>Avg course rating</span><b>{{ ((lessons.courses || []).length && Object.keys(lessons.ratings).length) ? '★' : '—' }}</b></li>
             <li><span>Forum posts</span><b>{{ forum.posts.length }}</b></li>
             <li><span>Weight logs</span><b>{{ records.weightLog?.length || 0 }}</b></li>
             <li><span>Diet entries</span><b>{{ records.dietLog?.length || 0 }}</b></li>
@@ -116,6 +170,27 @@ function handleLogout() { logout(); router.replace('/') }
 .card::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 5px; border-radius: 16px 16px 0 0; background: linear-gradient(90deg, var(--green-200), var(--green-600)); }
 .achv { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
 .achv li { display: flex; align-items: center; justify-content: space-between; background: var(--green-50); border: 1px solid var(--green-100); border-radius: 999px; padding: 8px 12px; }
+
+/* Error Message */
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  margin-top: 16px;
+}
+
+.error-message svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
 @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
 </style>
 

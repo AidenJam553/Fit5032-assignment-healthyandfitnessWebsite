@@ -1,7 +1,8 @@
 <script setup>
 import SiteHeader from '@/components/SiteHeader.vue'
+import Card from '@/components/Card.vue'
 import { useLessonsStore } from '@/lib/stores/lessons'
-import { onMounted, ref, computed, nextTick } from 'vue'
+import { onMounted, onUnmounted, ref, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const lessons = useLessonsStore()
@@ -9,14 +10,27 @@ const router = useRouter()
 const isLoaded = ref(false)
 const scrollY = ref(0)
 
-// 过滤状态
+// Filter state
 const activeDifficulty = ref('')
 const activeTopic = ref('')
 const searchQuery = ref('')
 
+// Debug watcher for lessons data
+watch(() => lessons.lessons, (newValue, oldValue) => {
+  console.log('Lessons data changed:', {
+    newValue,
+    oldValue,
+    isArray: Array.isArray(newValue),
+    type: typeof newValue
+  })
+}, { immediate: true, deep: true })
+
 onMounted(async () => {
-  // 强制重新加载课程数据
-  lessons.resetData()
+  // Load course data from Firebase
+  await lessons.initializeCourses()
+  
+  // Start real-time listeners for courses
+  lessons.startRealtimeListeners()
   
   await nextTick()
   setTimeout(() => {
@@ -31,9 +45,18 @@ onMounted(async () => {
   window.addEventListener('scroll', handleScroll, { passive: true })
 })
 
-// 过滤后的课程
+// Cleanup listeners on unmount
+onUnmounted(() => {
+  lessons.stopRealtimeListeners()
+})
+
+// Filtered courses
 const filteredLessons = computed(() => {
-  let filtered = lessons.lessons
+  // Get courses directly from store to avoid getter issues
+  const allCourses = lessons.courses || []
+  let filtered = Array.isArray(allCourses) ? allCourses : []
+  
+  console.log('filteredLessons computed - allCourses:', allCourses.length, 'type:', typeof allCourses)
 
   if (activeDifficulty.value) {
     filtered = filtered.filter(lesson => lesson.difficulty === activeDifficulty.value)
@@ -43,7 +66,7 @@ const filteredLessons = computed(() => {
     filtered = filtered.filter(lesson => lesson.topic === activeTopic.value)
   }
 
-  // 搜索过滤
+  // Search filter
   if (searchQuery.value.trim()) {
     const query = searchQuery.value.toLowerCase()
     filtered = filtered.filter(lesson => 
@@ -56,11 +79,11 @@ const filteredLessons = computed(() => {
   return filtered
 })
 
-// 过滤器选项
+// Filter options
 const difficulties = ['Beginner', 'Intermediate', 'Advanced']
 const topics = ['Nutrition', 'Workout']
 
-// 过滤器处理函数
+// Filter handler functions
 const setDifficultyFilter = (difficulty) => {
   // For sidebar clicks - toggle behavior
   if (typeof difficulty === 'string' && activeDifficulty.value === difficulty) {
@@ -79,24 +102,30 @@ const setTopicFilter = (topic) => {
   }
 }
 
-// 检查过滤器是否激活
+// Check if filter is active
 const isDifficultyActive = (difficulty) => activeDifficulty.value === difficulty
 const isTopicActive = (topic) => activeTopic.value === topic
 
-// 获取课程统计信息
+// Get course statistics
 const courseStats = computed(() => {
+  // Get courses directly from store to avoid getter issues
+  const allCourses = lessons.courses || []
+  const courses = Array.isArray(allCourses) ? allCourses : []
+  
+  console.log('courseStats computed - courses:', courses.length, 'type:', typeof courses)
+  
   const stats = {
-    total: lessons.lessons.length,
-    nutrition: lessons.lessons.filter(l => l.topic === 'Nutrition').length,
-    workout: lessons.lessons.filter(l => l.topic === 'Workout').length,
-    beginner: lessons.lessons.filter(l => l.difficulty === 'Beginner').length,
-    intermediate: lessons.lessons.filter(l => l.difficulty === 'Intermediate').length,
-    advanced: lessons.lessons.filter(l => l.difficulty === 'Advanced').length
+    total: courses.length,
+    nutrition: courses.filter(l => l.topic === 'Nutrition').length,
+    workout: courses.filter(l => l.topic === 'Workout').length,
+    beginner: courses.filter(l => l.difficulty === 'Beginner').length,
+    intermediate: courses.filter(l => l.difficulty === 'Intermediate').length,
+    advanced: courses.filter(l => l.difficulty === 'Advanced').length
   }
   return stats
 })
 
-// 获取当前过滤器标题
+// Get current filter title
 const getFilterTitle = () => {
   if (activeDifficulty.value && activeTopic.value) {
     return `${activeDifficulty.value} ${activeTopic.value} Courses`
@@ -108,7 +137,7 @@ const getFilterTitle = () => {
   return 'All Courses'
 }
 
-// 获取课程简介
+// Get course description
 const getCourseDescription = (title) => {
   const descriptions = {
     'Fundamentals of Nutrition': 'Learn the basics of nutrition science, including essential nutrients, dietary guidelines, and how to make informed food choices for better health.',
@@ -233,8 +262,10 @@ const getCourseDescription = (title) => {
         <!-- Left Sidebar -->
         <aside class="sidebar animate-slide-left" :class="{ 'animate-in': isLoaded }" style="animation-delay: 0.8s">
           <!-- Difficulty Filter -->
-          <div class="sidebar-card animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.0s">
-            <h3 class="sidebar-title">Difficulty Level</h3>
+          <Card variant="sidebar" size="medium" class="animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.0s">
+            <template #header>
+              <h3 class="sidebar-title">Difficulty Level</h3>
+            </template>
             <ul class="filter-list">
               <li 
                 v-for="(difficulty, index) in difficulties" 
@@ -265,11 +296,13 @@ const getCourseDescription = (title) => {
                 <span class="filter-count">{{ courseStats[difficulty.toLowerCase()] }}</span>
               </li>
             </ul>
-          </div>
+          </Card>
 
           <!-- Topic Filter -->
-          <div class="sidebar-card animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.4s">
-            <h3 class="sidebar-title">Course Topics</h3>
+          <Card variant="sidebar" size="medium" class="animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.4s">
+            <template #header>
+              <h3 class="sidebar-title">Course Topics</h3>
+            </template>
             <ul class="filter-list">
               <li 
                 v-for="(topic, index) in topics" 
@@ -300,16 +333,18 @@ const getCourseDescription = (title) => {
                 <span class="filter-count">{{ courseStats[topic.toLowerCase()] }}</span>
               </li>
             </ul>
-          </div>
+          </Card>
 
                     <!-- Course Stats -->
-          <div class="sidebar-card animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.8s">
-            <h3 class="sidebar-title">
-              <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 19v-6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2zm0 0V9a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v10m-6 0a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2m0 0V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2z"/>
-              </svg>
-              Course Overview
-            </h3>
+          <Card variant="sidebar" size="medium" class="animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.8s">
+            <template #header>
+              <h3 class="sidebar-title">
+                <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 19v-6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2zm0 0V9a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v10m-6 0a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2m0 0V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2z"/>
+                </svg>
+                Course Overview
+              </h3>
+            </template>
             
             <!-- Total Courses -->
             <div class="overview-main">
@@ -378,8 +413,8 @@ const getCourseDescription = (title) => {
                 </div>
               </div>
             </div>
-        </div>
-      </aside>
+          </Card>
+        </aside>
 
         <!-- Main Feed -->
         <main class="feed animate-slide-right" :class="{ 'animate-in': isLoaded }" style="animation-delay: 0.8s">
@@ -393,12 +428,15 @@ const getCourseDescription = (title) => {
 
           <!-- Courses Grid -->
           <div v-if="filteredLessons.length > 0" class="courses-grid">
-            <article 
+            <Card 
               v-for="(course, index) in filteredLessons" 
               :key="course.id"
+              variant="post" 
+              size="large" 
               class="course-card animate-fade-up"
               :class="{ 'animate-in': isLoaded }"
               :style="`animation-delay: ${1.2 + index * 0.1}s`"
+              :clickable="true"
               @click="router.push({ name: 'lesson-detail', params: { id: course.id } })"
             >
               <div class="course-thumb" :class="`difficulty-${course.difficulty.toLowerCase()}`">
@@ -419,12 +457,12 @@ const getCourseDescription = (title) => {
                     <span class="rating-text">{{ (lessons.averageRating(course.id) || 0).toFixed(1) }}</span>
                   </div>
                   <div class="course-progress-info">
-                    <span class="progress-percentage">{{ lessons.progress[course.id] || 0 }}%</span>
+                    <span class="progress-percentage">{{ lessons.getCourseProgress(course.id) || 0 }}%</span>
                     <span class="progress-label">Complete</span>
                   </div>
                 </div>
             </div>
-          </article>
+          </Card>
         </div>
 
           <!-- Empty State -->
@@ -459,8 +497,38 @@ const getCourseDescription = (title) => {
 }
 
 .page {
-  background: #f0fdf4;
+  background: url('/learn_wback.jpg') center/cover no-repeat;
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   min-height: 100vh;
+  position: relative;
+}
+
+.page::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('/learn_wback.jpg') center/cover no-repeat;
+  background-attachment: fixed;
+  filter: blur(8px);
+  opacity: 0.3;
+  z-index: -1;
+}
+
+.page::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.85);
+  z-index: -1;
 }
 
 .container {
@@ -471,7 +539,7 @@ const getCourseDescription = (title) => {
 
 /* Hero Section */
 .hero {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: url('/leaning_back.jpg') center/cover no-repeat;
   color: white;
   padding: 80px 0;
   text-align: center;
@@ -677,6 +745,8 @@ const getCourseDescription = (title) => {
 /* Main Content */
 .main-content {
   padding: 48px 0;
+  position: relative;
+  z-index: 1;
 }
 
 .content-grid {
@@ -686,20 +756,11 @@ const getCourseDescription = (title) => {
   align-items: start;
 }
 
-/* Sidebar */
-.sidebar-card {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 24px;
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-sm);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.sidebar-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+/* Sidebar - styles now handled by Card component */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .sidebar-title {
@@ -956,21 +1017,7 @@ const getCourseDescription = (title) => {
   gap: 24px;
 }
 
-.course-card {
-  background: #ffffff;
-  border-radius: 20px;
-  overflow: hidden;
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-sm);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-}
-
-.course-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: var(--shadow-xl);
-  border-color: var(--primary-color);
-}
+/* Course card styles now handled by Card component */
 
 .course-thumb {
   height: 160px;
@@ -980,6 +1027,8 @@ const getCourseDescription = (title) => {
   align-items: center;
   justify-content: center;
   color: white;
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
 }
 
 .course-thumb.difficulty-beginner {

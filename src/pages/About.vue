@@ -1,5 +1,7 @@
 <script setup>
 import SiteHeader from '@/components/SiteHeader.vue'
+import Card from '@/components/Card.vue'
+import Button from '@/components/Button.vue'
 </script>
 
 <template>
@@ -13,32 +15,34 @@ import SiteHeader from '@/components/SiteHeader.vue'
     </section>
 
     <main class="container about">
-      <div class="panel statement">
-        <h2>Our mission</h2>
+      <Card variant="default" size="large" class="statement">
+        <template #header>
+          <h2>Our mission</h2>
+        </template>
         <p>Help everyone build sustainable habits with a clear plan and a supportive community.</p>
-      </div>
+      </Card>
 
       <div class="grid">
-        <div class="card feature">
+        <Card variant="default" size="medium" class="feature" hover>
           <div class="icon" aria-hidden="true">📚</div>
           <h3>Learn</h3>
           <p>Curated courses on nutrition, training and recovery with progress tracking.</p>
-        </div>
-        <div class="card feature">
+        </Card>
+        <Card variant="default" size="medium" class="feature" hover>
           <div class="icon" aria-hidden="true">📈</div>
           <h3>Record</h3>
           <p>Log weight, meals and workouts with clean visuals that highlight your progress.</p>
-        </div>
-        <div class="card feature">
+        </Card>
+        <Card variant="default" size="medium" class="feature" hover>
           <div class="icon" aria-hidden="true">💬</div>
           <h3>Forum</h3>
           <p>Ask questions, share wins, and get feedback from supportive peers.</p>
-        </div>
+        </Card>
       </div>
 
       <div class="cta">
-        <router-link class="btn btn--primary" to="/register">Create an account</router-link>
-        <router-link class="btn btn--ghost" to="/learn">Browse courses</router-link>
+        <Button variant="primary" size="medium" tag="router-link" to="/register">Create an account</Button>
+        <Button variant="secondary" size="medium" tag="router-link" to="/learn">Browse courses</Button>
       </div>
     </main>
   </div>
@@ -52,9 +56,8 @@ import SiteHeader from '@/components/SiteHeader.vue'
 .subtitle { margin: 0 auto; max-width: 720px; color: var(--gray-700); }
 
 .about { padding: 24px 0 56px; }
-.statement { padding: 20px; margin-bottom: 20px; }
+.statement { margin-bottom: 20px; }
 .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-.card { padding: 20px; }
 .feature { text-align: center; }
 .icon { font-size: 36px; margin-bottom: 6px; }
 .cta { display: flex; gap: 12px; justify-content: center; margin-top: 24px; }
