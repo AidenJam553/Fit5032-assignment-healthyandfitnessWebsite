@@ -17,14 +17,14 @@ const userWishlistLessons = computed(() => {
 const wishlistProgress = computed(() => {
   if (!currentUser.value || userWishlistLessons.value.length === 0) return 0
   const totalProgress = userWishlistLessons.value.reduce((sum, lesson) => {
-    return sum + (lessons.progress[lesson.id] || 0)
+    return sum + (lessons.progress[lesson.id]?.progressPercentage || 0)
   }, 0)
   return Math.round(totalProgress / userWishlistLessons.value.length)
 })
 
 onMounted(() => {
   currentUser.value = getCurrentUser()
-  lessons.seedIfEmpty()
+  lessons.initializeCourses()
 })
 </script>
 
@@ -114,9 +114,9 @@ onMounted(() => {
               </div>
               <div class="course-progress">
                 <div class="progress-bar">
-                  <div class="progress-fill" :style="{ width: `${lessons.progress[course.id] || 0}%` }"></div>
+                  <div class="progress-fill" :style="{ width: `${lessons.progress[course.id]?.progressPercentage || 0}%` }"></div>
                 </div>
-                <span class="progress-text">{{ lessons.progress[course.id] || 0 }}%</span>
+                <span class="progress-text">{{ lessons.progress[course.id]?.progressPercentage || 0 }}%</span>
               </div>
             </div>
             <div v-if="userWishlistLessons.length > 3" class="more-courses">

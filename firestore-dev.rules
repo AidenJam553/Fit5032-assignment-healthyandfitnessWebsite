@@ -1,0 +1,13 @@
+// Firestore Security Rules - Development Version
+// WARNING: These rules allow all access - only use for development!
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow all reads and writes for development
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
+

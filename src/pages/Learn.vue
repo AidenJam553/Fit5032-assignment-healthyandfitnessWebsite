@@ -2,7 +2,7 @@
 import SiteHeader from '@/components/SiteHeader.vue'
 import Card from '@/components/Card.vue'
 import { useLessonsStore } from '@/lib/stores/lessons'
-import { onMounted, ref, computed, nextTick } from 'vue'
+import { onMounted, onUnmounted, ref, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const lessons = useLessonsStore()
@@ -15,9 +15,22 @@ const activeDifficulty = ref('')
 const activeTopic = ref('')
 const searchQuery = ref('')
 
+// Debug watcher for lessons data
+watch(() => lessons.lessons, (newValue, oldValue) => {
+  console.log('Lessons data changed:', {
+    newValue,
+    oldValue,
+    isArray: Array.isArray(newValue),
+    type: typeof newValue
+  })
+}, { immediate: true, deep: true })
+
 onMounted(async () => {
-  // Force reload course data
-  lessons.resetData()
+  // Load course data from Firebase
+  await lessons.initializeCourses()
+  
+  // Start real-time listeners for courses
+  lessons.startRealtimeListeners()
   
   await nextTick()
   setTimeout(() => {
@@ -32,9 +45,18 @@ onMounted(async () => {
   window.addEventListener('scroll', handleScroll, { passive: true })
 })
 
+// Cleanup listeners on unmount
+onUnmounted(() => {
+  lessons.stopRealtimeListeners()
+})
+
 // Filtered courses
 const filteredLessons = computed(() => {
-  let filtered = lessons.lessons
+  // Get courses directly from store to avoid getter issues
+  const allCourses = lessons.courses || []
+  let filtered = Array.isArray(allCourses) ? allCourses : []
+  
+  console.log('filteredLessons computed - allCourses:', allCourses.length, 'type:', typeof allCourses)
 
   if (activeDifficulty.value) {
     filtered = filtered.filter(lesson => lesson.difficulty === activeDifficulty.value)
@@ -86,13 +108,19 @@ const isTopicActive = (topic) => activeTopic.value === topic
 
 // Get course statistics
 const courseStats = computed(() => {
+  // Get courses directly from store to avoid getter issues
+  const allCourses = lessons.courses || []
+  const courses = Array.isArray(allCourses) ? allCourses : []
+  
+  console.log('courseStats computed - courses:', courses.length, 'type:', typeof courses)
+  
   const stats = {
-    total: lessons.lessons.length,
-    nutrition: lessons.lessons.filter(l => l.topic === 'Nutrition').length,
-    workout: lessons.lessons.filter(l => l.topic === 'Workout').length,
-    beginner: lessons.lessons.filter(l => l.difficulty === 'Beginner').length,
-    intermediate: lessons.lessons.filter(l => l.difficulty === 'Intermediate').length,
-    advanced: lessons.lessons.filter(l => l.difficulty === 'Advanced').length
+    total: courses.length,
+    nutrition: courses.filter(l => l.topic === 'Nutrition').length,
+    workout: courses.filter(l => l.topic === 'Workout').length,
+    beginner: courses.filter(l => l.difficulty === 'Beginner').length,
+    intermediate: courses.filter(l => l.difficulty === 'Intermediate').length,
+    advanced: courses.filter(l => l.difficulty === 'Advanced').length
   }
   return stats
 })
@@ -429,7 +457,7 @@ const getCourseDescription = (title) => {
                     <span class="rating-text">{{ (lessons.averageRating(course.id) || 0).toFixed(1) }}</span>
                   </div>
                   <div class="course-progress-info">
-                    <span class="progress-percentage">{{ lessons.progress[course.id] || 0 }}%</span>
+                    <span class="progress-percentage">{{ lessons.getCourseProgress(course.id) || 0 }}%</span>
                     <span class="progress-label">Complete</span>
                   </div>
                 </div>

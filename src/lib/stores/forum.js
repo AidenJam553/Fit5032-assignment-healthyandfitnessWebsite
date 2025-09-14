@@ -1,13 +1,80 @@
 import { defineStore } from 'pinia'
-
-const POSTS_KEY = 'hf_posts_v1'
-
-function load() { try { return JSON.parse(localStorage.getItem(POSTS_KEY) || '[]') } catch { return [] } }
-function save(data) { localStorage.setItem(POSTS_KEY, JSON.stringify(data)) }
+import { forumService } from '../firebaseService'
 
 export const useForumStore = defineStore('forum', {
-  state: () => ({ posts: load(), activeTopic: 'All' }),
+  state: () => ({ posts: [], activeTopic: 'All', loading: false, error: null }),
   actions: {
+    async loadPosts() {
+      this.loading = true
+      this.error = null
+      try {
+        const result = await forumService.getPosts()
+        if (result.ok) {
+          this.posts = result.posts
+        } else {
+          this.error = result.error
+        }
+      } catch (err) {
+        this.error = 'Failed to load posts'
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async createPost(postData) {
+      this.loading = true
+      this.error = null
+      try {
+        const result = await forumService.createPost(postData)
+        if (result.ok) {
+          this.posts.unshift(result.post)
+        } else {
+          this.error = result.error
+        }
+      } catch (err) {
+        this.error = 'Failed to create post'
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async updatePost(postId, postData) {
+      this.loading = true
+      this.error = null
+      try {
+        const result = await forumService.updatePost(postId, postData)
+        if (result.ok) {
+          const index = this.posts.findIndex(p => p.id === postId)
+          if (index !== -1) {
+            this.posts[index] = result.post
+          }
+        } else {
+          this.error = result.error
+        }
+      } catch (err) {
+        this.error = 'Failed to update post'
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async deletePost(postId) {
+      this.loading = true
+      this.error = null
+      try {
+        const result = await forumService.deletePost(postId)
+        if (result.ok) {
+          this.posts = this.posts.filter(p => p.id !== postId)
+        } else {
+          this.error = result.error
+        }
+      } catch (err) {
+        this.error = 'Failed to delete post'
+      } finally {
+        this.loading = false
+      }
+    },
+
     seedIfEmpty() {
       if (this.posts.length) return
       this.posts = [
@@ -72,7 +139,6 @@ export const useForumStore = defineStore('forum', {
           replyCount: 12
         },
       ]
-      save(this.posts)
     },
     create({ author, title, content, topic, images = [] }) {
       const post = { 
@@ -89,7 +155,6 @@ export const useForumStore = defineStore('forum', {
         replyCount: 0
       }
       this.posts.unshift(post)
-      save(this.posts)
       return post
     },
     toggleLike(postId, userId) {
@@ -106,7 +171,6 @@ export const useForumStore = defineStore('forum', {
         post.likedBy.push(userId)
         post.likes += 1
       }
-      save(this.posts)
     },
     addReply(postId) {
       const post = this.getById(postId)
@@ -114,13 +178,11 @@ export const useForumStore = defineStore('forum', {
       
       post.replyCount += 1
       post.replies = post.replyCount
-      save(this.posts)
     },
     deletePost(postId) {
       const index = this.posts.findIndex(p => p.id === postId)
       if (index > -1) {
         this.posts.splice(index, 1)
-        save(this.posts)
         return true
       }
       return false
@@ -138,8 +200,6 @@ export const useForumStore = defineStore('forum', {
       }
 
       this.posts[postIndex] = updatedPost
-      
-      save(this.posts)
       return true
     },
     getById(id) { return this.posts.find(p => p.id === id) },

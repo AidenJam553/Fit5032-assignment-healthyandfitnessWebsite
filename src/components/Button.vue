@@ -29,7 +29,7 @@ const props = defineProps({
   variant: {
     type: String,
     default: 'primary',
-    validator: (value) => ['primary', 'secondary'].includes(value)
+    validator: (value) => ['primary', 'secondary', 'warning', 'success', 'danger'].includes(value)
   },
   size: {
     type: String,
@@ -243,6 +243,63 @@ a.btn.btn-secondary:hover:not(.btn-disabled):not(.btn-loading),
   background: #f9fafb !important;
   border-color: #16a34a !important;
   color: #16a34a !important;
+  transform: translateY(-2px) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* Warning variant */
+button.btn.btn-warning,
+a.btn.btn-warning,
+.btn.btn-warning {
+  background: #f59e0b !important;
+  color: #ffffff !important;
+  border: 2px solid #f59e0b !important;
+}
+
+button.btn.btn-warning:hover:not(.btn-disabled):not(.btn-loading),
+a.btn.btn-warning:hover:not(.btn-disabled):not(.btn-loading),
+.btn.btn-warning:hover:not(.btn-disabled):not(.btn-loading) {
+  background: #d97706 !important;
+  border-color: #d97706 !important;
+  color: #ffffff !important;
+  transform: translateY(-2px) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* Success variant */
+button.btn.btn-success,
+a.btn.btn-success,
+.btn.btn-success {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  border: 2px solid #10b981 !important;
+}
+
+button.btn.btn-success:hover:not(.btn-disabled):not(.btn-loading),
+a.btn.btn-success:hover:not(.btn-disabled):not(.btn-loading),
+.btn.btn-success:hover:not(.btn-disabled):not(.btn-loading) {
+  background: #059669 !important;
+  border-color: #059669 !important;
+  color: #ffffff !important;
+  transform: translateY(-2px) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+/* Danger variant */
+button.btn.btn-danger,
+a.btn.btn-danger,
+.btn.btn-danger {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  border: 2px solid #ef4444 !important;
+}
+
+button.btn.btn-danger:hover:not(.btn-disabled):not(.btn-loading),
+a.btn.btn-danger:hover:not(.btn-disabled):not(.btn-loading),
+.btn.btn-danger:hover:not(.btn-disabled):not(.btn-loading) {
+  background: #dc2626 !important;
+  border-color: #dc2626 !important;
+  color: #ffffff !important;
   transform: translateY(-2px) !important;
   box-shadow: var(--shadow-lg) !important;
 }
