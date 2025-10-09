@@ -1,6 +1,8 @@
 // 管理员账号创建工具
 // 在浏览器控制台中运行此脚本来创建管理员账号
 
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
+import { auth } from './firebase.js'
 import { userService } from './firebaseService.js'
 
 export async function createAdminAccount(email = 'admin@admin.com', password = 'Admin123!', username = 'Administrator') {
@@ -23,12 +25,20 @@ export async function createAdminAccount(email = 'admin@admin.com', password = '
       return { ok: false, error: 'Password must be at least 8 characters' }
     }
     
-    // 创建管理员用户数据
+    // 使用Firebase Auth创建管理员账户
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+    const user = userCredential.user
+    
+    // 更新用户的显示名称
+    await updateProfile(user, {
+      displayName: username
+    })
+    
+    // 创建管理员用户数据在Firestore中
     const adminData = {
-      id: email, // 使用邮箱作为ID
+      id: user.uid,
       username: username,
       email: email,
-      password: password, // 注意：这里应该加密，但为了简化，我们让userService处理
       role: 'admin',
       provider: 'local',
       createdAt: new Date().toISOString(),
@@ -43,7 +53,7 @@ export async function createAdminAccount(email = 'admin@admin.com', password = '
       ]
     }
     
-    // 使用userService创建用户（会自动处理密码加密）
+    // 在Firestore中创建用户文档
     const result = await userService.createUser(adminData)
     
     if (result.ok) {
@@ -53,9 +63,10 @@ export async function createAdminAccount(email = 'admin@admin.com', password = '
       console.log('用户名:', username)
       console.log('角色:', adminData.role)
       console.log('权限:', adminData.permissions)
+      console.log('Firebase UID:', user.uid)
       console.log('')
       console.log('⚠️  请立即登录并修改密码！')
-      console.log('登录地址: /auth/login')
+      console.log('登录地址: /login')
       
       return { ok: true, user: result.user }
     } else {
@@ -65,7 +76,17 @@ export async function createAdminAccount(email = 'admin@admin.com', password = '
     
   } catch (error) {
     console.error('❌ 创建管理员账号失败:', error)
-    return { ok: false, error: error.message }
+    let errorMessage = '创建失败';
+    
+    if (error.code === 'auth/email-already-in-use') {
+      errorMessage = '邮箱已被使用';
+    } else if (error.code === 'auth/weak-password') {
+      errorMessage = '密码太弱';
+    } else if (error.code === 'auth/invalid-email') {
+      errorMessage = '无效的邮箱地址';
+    }
+    
+    return { ok: false, error: errorMessage };
   }
 }
 

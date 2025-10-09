@@ -1,5 +1,15 @@
-// Client-side auth functions using Firebase
+// Client-side auth functions using Firebase Authentication
 
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
+  updateProfile
+} from 'firebase/auth'
+import { auth } from './firebase'
 import { userService } from './firebaseService'
 
 const CURRENT_USER_KEY = 'currentUser';
@@ -14,6 +24,7 @@ export function getCurrentUser() {
 
 export function logout() {
   localStorage.removeItem(CURRENT_USER_KEY);
+  return signOut(auth);
 }
 
 function isAdminEmail(email) {
@@ -26,6 +37,54 @@ function isAdminEmail(email) {
 export function isCurrentUserAdmin() {
   const currentUser = getCurrentUser();
   return currentUser && currentUser.role === 'admin';
+}
+
+// 获取当前用户的角色
+export function getCurrentUserRole() {
+  const currentUser = getCurrentUser();
+  return currentUser ? currentUser.role : null;
+}
+
+// 检查用户是否有特定权限
+export function hasPermission(permission) {
+  const currentUser = getCurrentUser();
+  if (!currentUser) return false;
+  
+  // 管理员拥有所有权限
+  if (currentUser.role === 'admin') return true;
+  
+  // 检查用户权限列表
+  return currentUser.permissions && currentUser.permissions.includes(permission);
+}
+
+// 检查用户是否为普通用户
+export function isRegularUser() {
+  const currentUser = getCurrentUser();
+  return currentUser && currentUser.role === 'user';
+}
+
+// 检查用户是否已登录
+export function isUserLoggedIn() {
+  const currentUser = getCurrentUser();
+  return currentUser !== null;
+}
+
+// 获取当前用户ID
+export function getCurrentUserId() {
+  const currentUser = getCurrentUser();
+  return currentUser ? currentUser.id : null;
+}
+
+// 获取当前用户信息
+export function getCurrentUserInfo() {
+  const currentUser = getCurrentUser();
+  return currentUser ? {
+    id: currentUser.id,
+    email: currentUser.email,
+    username: currentUser.username,
+    role: currentUser.role,
+    permissions: currentUser.permissions || []
+  } : null;
 }
 
 export function getRedirectForEmail(email) {
@@ -150,47 +209,62 @@ export async function registerLocal({ username, email, password }) {
     return { ok: false, error: strength.message };
   }
   
-  // Check if user already exists
-  const existingUser = await userService.getUserByEmail(email);
-  if (existingUser.ok) {
-    return { ok: false, error: 'Email already exists' };
-  }
-  
-  // Hash password
-  let hashedPassword;
   try {
-    const bcrypt = await import('bcryptjs');
-    hashedPassword = await bcrypt.hash(password, 10);
+    // Create user with Firebase Auth
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    
+    // Update the user's display name
+    await updateProfile(user, {
+      displayName: username.trim()
+    });
+    
+    // Create user document in Firestore
+    const userData = {
+      id: user.uid,
+      username: username.trim(),
+      email: email.trim(),
+      role: 'user',
+      provider: 'local',
+      createdAt: new Date().toISOString()
+    };
+    
+    const result = await userService.createUser(userData);
+    
+    if (!result.ok) {
+      console.error('Failed to create user in Firestore:', result.error);
+      return { ok: false, error: 'Failed to create user profile' };
+    }
+    
+    // 注册成功后退出登录，要求用户重新登录
+    await signOut(auth);
+    
+    console.log('Registration successful, user signed out');
+    
+    return { 
+      ok: true, 
+      message: 'Registration successful! Please login with your credentials.',
+      user: {
+        id: user.uid,
+        email: user.email,
+        username: username.trim(),
+        role: 'user'
+      }
+    };
   } catch (error) {
-    console.error('Password hashing error:', error);
-    return { ok: false, error: 'Registration failed' };
+    console.error('Registration error:', error);
+    let errorMessage = 'Registration failed';
+    
+    if (error.code === 'auth/email-already-in-use') {
+      errorMessage = 'Email already exists';
+    } else if (error.code === 'auth/weak-password') {
+      errorMessage = 'Password is too weak';
+    } else if (error.code === 'auth/invalid-email') {
+      errorMessage = 'Invalid email address';
+    }
+    
+    return { ok: false, error: errorMessage };
   }
-  
-  // Create user
-  const userId = crypto.randomUUID();
-  const userData = {
-    id: userId,
-    username: username.trim(),
-    email: email.trim(),
-    password: hashedPassword,
-    role: 'user',
-    provider: 'local',
-    createdAt: new Date().toISOString()
-  };
-  
-  const result = await userService.createUser(userData);
-  
-  // 注册成功后不自动登录，用户需要重新登录
-  // if (result.ok) {
-  //   setCurrentUser({ 
-  //     id: result.user.id, 
-  //     email: result.user.email, 
-  //     username: result.user.username, 
-  //     role: result.user.role 
-  //   });
-  // }
-  
-  return result;
 }
 
 export async function loginLocal({ email, password }) {
@@ -199,86 +273,106 @@ export async function loginLocal({ email, password }) {
     return { ok: false, error: 'Missing email or password' };
   }
   
-  // Find user
-  const result = await userService.getUserByEmail(email);
-  if (!result.ok) {
-    return { ok: false, error: 'Account not found' };
-  }
-  
-  const user = result.user;
-  if (user.provider === 'google') {
-    return { ok: false, error: 'This account uses Google sign-in' };
-  }
-  
-  // Verify password hash using bcrypt
   try {
-    const bcrypt = await import('bcryptjs');
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) {
-      return { ok: false, error: 'Incorrect password' };
+    // Sign in with Firebase Auth
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    
+    // Get user data from Firestore
+    const result = await userService.getUserByEmail(email);
+    if (!result.ok) {
+      return { ok: false, error: 'User data not found' };
     }
+    
+    const userData = result.user;
+    
+    // 调试：打印用户数据
+    console.log('Login user data:', userData);
+    console.log('User role:', userData.role);
+    
+    setCurrentUser({ 
+      id: user.uid, 
+      email: user.email, 
+      username: userData.username, 
+      role: userData.role 
+    });
+    
+    // 调试：打印设置后的当前用户
+    console.log('Current user after login:', getCurrentUser());
+    
+    return { ok: true, user: { id: user.uid, email: user.email, username: userData.username, role: userData.role } };
   } catch (error) {
-    console.error('Password verification error:', error);
-    return { ok: false, error: 'Authentication failed' };
+    console.error('Login error:', error);
+    let errorMessage = 'Login failed';
+    
+    if (error.code === 'auth/user-not-found') {
+      errorMessage = 'Account not found';
+    } else if (error.code === 'auth/wrong-password') {
+      errorMessage = 'Incorrect password';
+    } else if (error.code === 'auth/invalid-email') {
+      errorMessage = 'Invalid email address';
+    } else if (error.code === 'auth/too-many-requests') {
+      errorMessage = 'Too many failed attempts. Please try again later';
+    }
+    
+    return { ok: false, error: errorMessage };
   }
-  
-  // 调试：打印用户数据
-  console.log('Login user data:', user);
-  console.log('User role:', user.role);
-  
-  setCurrentUser({ 
-    id: user.id, 
-    email: user.email, 
-    username: user.username, 
-    role: user.role 
-  });
-  
-  // 调试：打印设置后的当前用户
-  console.log('Current user after login:', getCurrentUser());
-  
-  return { ok: true, user: { id: user.id, email: user.email, username: user.username, role: user.role } };
 }
 
-export async function signInWithGoogle(googleEmail, googleName = null) {
-  if (typeof googleEmail !== 'string' || !googleEmail.includes('@')) {
-    return { ok: false, error: 'Invalid Google email' };
-  }
-  const email = googleEmail.trim();
-  
-  // Prohibit creating admin accounts through Google login
-  if (isAdminEmail(email)) {
-    return { ok: false, error: 'Admin account can only login locally, please use password login' };
-  }
-  
-  // Check if user exists
-  let result = await userService.getUserByEmail(email);
-  
-  if (!result.ok) {
-    // Create new user
-    const userId = crypto.randomUUID();
-    const username = googleName ? googleName.trim() : email.split('@')[0];
-    const userData = {
-      id: userId,
-      username,
-      email,
-      provider: 'google',
-      role: 'user',
-      createdAt: new Date().toISOString()
-    };
+export async function signInWithGoogle() {
+  try {
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
     
-    result = await userService.createUser(userData);
+    const email = user.email;
+    const name = user.displayName || user.email.split('@')[0];
+    
+    // Prohibit creating admin accounts through Google login
+    if (isAdminEmail(email)) {
+      await signOut(auth); // Sign out the user
+      return { ok: false, error: 'Admin account can only login locally, please use password login' };
+    }
+    
+    // Check if user exists in Firestore
+    let userResult = await userService.getUserByEmail(email);
+    
+    if (!userResult.ok) {
+      // Create new user in Firestore
+      const userData = {
+        id: user.uid,
+        username: name,
+        email: email,
+        provider: 'google',
+        role: 'user',
+        createdAt: new Date().toISOString()
+      };
+      
+      userResult = await userService.createUser(userData);
+    }
+    
+    if (userResult.ok) {
+      setCurrentUser({ 
+        id: user.uid, 
+        email: user.email, 
+        username: userResult.user.username, 
+        role: userResult.user.role 
+      });
+    }
+    
+    return userResult;
+  } catch (error) {
+    console.error('Google sign-in error:', error);
+    let errorMessage = 'Google sign-in failed';
+    
+    if (error.code === 'auth/popup-closed-by-user') {
+      errorMessage = 'Sign-in cancelled';
+    } else if (error.code === 'auth/popup-blocked') {
+      errorMessage = 'Popup blocked by browser';
+    }
+    
+    return { ok: false, error: errorMessage };
   }
-  
-  if (result.ok) {
-    setCurrentUser({ 
-      id: result.user.id, 
-      email: result.user.email, 
-      username: result.user.username, 
-      role: result.user.role 
-    });
-  }
-  
-  return result;
 }
 
 // User profile management functions
@@ -308,6 +402,31 @@ export function requireAdmin(to) {
   if (!to.path.startsWith('/admin')) return true;
   const current = getCurrentUser();
   return current && current.role === 'admin';
+}
+
+// Initialize auth state listener
+export function initializeAuth() {
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      // User is signed in
+      try {
+        const result = await userService.getUserByEmail(user.email);
+        if (result.ok) {
+          setCurrentUser({
+            id: user.uid,
+            email: user.email,
+            username: result.user.username,
+            role: result.user.role
+          });
+        }
+      } catch (error) {
+        console.error('Error getting user data:', error);
+      }
+    } else {
+      // User is signed out
+      setCurrentUser(null);
+    }
+  });
 }
 
 

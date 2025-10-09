@@ -26,10 +26,11 @@ export const userService = {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       })
-      return { id: docRef.id, ...userData }
+      console.log('User created in Firestore with ID:', docRef.id)
+      return { ok: true, user: { id: docRef.id, ...userData } }
     } catch (error) {
       console.error('Error creating user:', error)
-      throw error
+      return { ok: false, error: error.message }
     }
   },
 
@@ -108,6 +109,30 @@ export const userService = {
       }
     } catch (error) {
       console.error('Error saving user:', error)
+      return { ok: false, error: error.message }
+    }
+  },
+
+  // Delete user (only deletes Firestore document, not Firebase Auth user)
+  // Note: userId should be the Firestore document ID, not the Firebase Auth UID
+  async deleteUser(userId) {
+    try {
+      console.log('Attempting to delete user with ID:', userId)
+      
+      // 直接使用文档 ID 删除
+      const docRef = doc(db, 'users', userId)
+      const docSnap = await getDoc(docRef)
+      
+      if (!docSnap.exists()) {
+        console.error('User document not found:', userId)
+        return { ok: false, error: 'User not found' }
+      }
+      
+      await deleteDoc(docRef)
+      console.log('User deleted from Firestore successfully:', userId)
+      return { ok: true }
+    } catch (error) {
+      console.error('Error deleting user:', error)
       return { ok: false, error: error.message }
     }
   }

@@ -6,9 +6,27 @@ import bcrypt from 'bcryptjs'
 import dotenv from 'dotenv'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
+import sgMail from '@sendgrid/mail'
+import multer from 'multer'
+import { initializeApp } from 'firebase/app'
+import { getFirestore, collection, getDocs } from 'firebase/firestore'
 
 // Load environment variables
 dotenv.config()
+
+// Initialize Firebase
+const firebaseConfig = {
+  apiKey: process.env.VITE_FIREBASE_API_KEY,
+  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.VITE_FIREBASE_APP_ID
+}
+
+const firebaseApp = initializeApp(firebaseConfig)
+const db = getFirestore(firebaseApp)
+console.log('Firebase initialized in server')
 
 const app = express()
 
@@ -55,7 +73,26 @@ app.use(bodyParser.json({ limit: '1mb' }))
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || ''
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@admin.com'
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin123'
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || ''
+const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || ''
+
 const client = new OAuth2Client(GOOGLE_CLIENT_ID)
+
+// Initialize SendGrid
+if (SENDGRID_API_KEY) {
+  sgMail.setApiKey(SENDGRID_API_KEY)
+  console.log('SendGrid initialized successfully')
+} else {
+  console.warn('Warning: SENDGRID_API_KEY not configured')
+}
+
+// Configure multer for file uploads (in-memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+})
 
 // In-memory user storage (in production, use a proper database)
 let users = []
@@ -449,6 +486,134 @@ app.post('/api/auth/google', async (req, res) => {
   } catch (err) {
     console.error('Google auth error', err)
     res.status(401).json({ ok: false, error: `Google authentication failed: ${err.message}` })
+  }
+})
+
+// Get all users (admin only) for email recipient selection from Firebase
+app.get('/api/admin/users', async (req, res) => {
+  try {
+    console.log('Fetching users from Firestore...')
+    
+    // Get all users from Firestore
+    const usersCollection = collection(db, 'users')
+    const querySnapshot = await getDocs(usersCollection)
+    
+    const usersList = []
+    querySnapshot.forEach((doc) => {
+      const userData = doc.data()
+      usersList.push({
+        id: doc.id,
+        username: userData.username || userData.displayName || 'Unknown',
+        email: userData.email,
+        role: userData.role || 'user',
+        provider: userData.provider || 'firebase',
+        createdAt: userData.createdAt
+      })
+    })
+    
+    console.log(`Found ${usersList.length} users in Firestore`)
+    res.json({ ok: true, users: usersList })
+  } catch (err) {
+    console.error('Get users error', err)
+    res.status(500).json({ ok: false, error: 'Internal server error: ' + err.message })
+  }
+})
+
+// Send email endpoint with attachment support
+app.post('/api/admin/send-email', upload.array('attachments', 5), async (req, res) => {
+  try {
+    // Check SendGrid configuration
+    if (!SENDGRID_API_KEY || !SENDGRID_FROM_EMAIL) {
+      return res.status(500).json({ 
+        ok: false, 
+        error: 'SendGrid is not configured. Please set SENDGRID_API_KEY and SENDGRID_FROM_EMAIL in environment variables.' 
+      })
+    }
+
+    const { to, subject, text, html } = req.body
+    
+    // Validate required fields
+    if (!to || !subject) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'Missing required fields: to and subject are required' 
+      })
+    }
+    
+    if (!text && !html) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'Email must have either text or html content' 
+      })
+    }
+    
+    // Parse recipients (can be comma-separated)
+    const recipients = to.split(',').map(email => email.trim()).filter(email => email)
+    
+    // Validate email addresses
+    const invalidEmails = recipients.filter(email => !validateEmail(email))
+    if (invalidEmails.length > 0) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: `Invalid email addresses: ${invalidEmails.join(', ')}` 
+      })
+    }
+    
+    // Prepare email message
+    const msg = {
+      to: recipients,
+      from: SENDGRID_FROM_EMAIL,
+      subject: sanitizeInput(subject),
+      text: text || undefined,
+      html: html || undefined,
+    }
+    
+    // Add attachments if any
+    if (req.files && req.files.length > 0) {
+      msg.attachments = req.files.map(file => ({
+        content: file.buffer.toString('base64'),
+        filename: file.originalname,
+        type: file.mimetype,
+        disposition: 'attachment'
+      }))
+    }
+    
+    // Send email
+    console.log('Sending email to:', recipients)
+    console.log('SendGrid message:', JSON.stringify(msg, null, 2))
+    
+    try {
+      const result = await sgMail.send(msg)
+      console.log('SendGrid API response:', result)
+      console.log('Email sent successfully to:', recipients)
+      
+      res.json({ 
+        ok: true, 
+        message: `Email sent successfully to ${recipients.length} recipient(s)`,
+        recipients: recipients.length
+      })
+    } catch (sendError) {
+      console.error('SendGrid send error:', sendError)
+      console.error('SendGrid error details:', JSON.stringify(sendError.response?.body, null, 2))
+      throw sendError
+    }
+  } catch (err) {
+    console.error('Send email error', err)
+    
+    // SendGrid specific error handling
+    if (err.response) {
+      console.error('SendGrid error response:', err.response.body)
+      return res.status(err.code || 500).json({ 
+        ok: false, 
+        error: `SendGrid error: ${err.message}`,
+        details: err.response.body?.errors || []
+      })
+    }
+    
+    res.status(500).json({ 
+      ok: false, 
+      error: `Failed to send email: ${err.message}` 
+    })
   }
 })
 

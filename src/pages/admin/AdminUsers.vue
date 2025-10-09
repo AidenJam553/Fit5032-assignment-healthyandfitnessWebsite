@@ -51,12 +51,17 @@ async function loadUsers() {
 
 // 删除用户
 async function deleteUser(user) {
+  console.log('Delete user called with:', user)
+  
   if (!confirm(`Are you sure you want to delete user "${user.username || user.email}"?`)) {
     return
   }
   
   try {
+    console.log('Calling userService.deleteUser with ID:', user.id)
     const result = await userService.deleteUser(user.id)
+    console.log('Delete result:', result)
+    
     if (result.ok) {
       // 从列表中移除用户
       users.value = users.value.filter(u => u.id !== user.id)
@@ -70,25 +75,8 @@ async function deleteUser(user) {
   }
 }
 
-// 更新用户角色
-async function updateUserRole(user, newRole) {
-  try {
-    const result = await userService.updateUser(user.id, { role: newRole })
-    if (result.ok) {
-      // 更新本地用户数据
-      const userIndex = users.value.findIndex(u => u.id === user.id)
-      if (userIndex !== -1) {
-        users.value[userIndex].role = newRole
-      }
-      showSuccessMessage(`User role updated to ${newRole}`)
-    } else {
-      showErrorMessage(`Failed to update user role: ${result.error}`)
-    }
-  } catch (err) {
-    console.error('Error updating user role:', err)
-    showErrorMessage('Failed to update user role')
-  }
-}
+// 用户角色只读 - 不允许修改
+// 管理员角色由系统管理，普通用户注册时自动分配
 
 // 切换用户选择
 function toggleUserSelection(userId) {
@@ -298,14 +286,9 @@ onMounted(() => {
                 </td>
                 <td class="user-email">{{ user.email }}</td>
                 <td class="user-role">
-                  <select 
-                    :value="user.role" 
-                    @change="updateUserRole(user, $event.target.value)"
-                    class="role-select"
-                  >
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
-                  </select>
+                  <span class="role-badge" :class="user.role">
+                    {{ user.role === 'admin' ? 'Admin' : 'User' }}
+                  </span>
                 </td>
                 <td class="user-provider">
                   <span class="provider-badge" :class="user.provider">
@@ -558,18 +541,26 @@ onMounted(() => {
   font-size: 0.875rem;
 }
 
-.role-select {
-  padding: 4px 8px;
-  border: 1px solid #e2e8f0;
+.role-badge {
+  display: inline-block;
+  padding: 4px 12px;
   border-radius: 6px;
-  font-size: 0.875rem;
-  background: white;
-  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.role-select:focus {
-  outline: none;
-  border-color: #10b981;
+.role-badge.admin {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.role-badge.user {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
 }
 
 .provider-badge {

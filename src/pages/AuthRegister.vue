@@ -11,6 +11,7 @@ const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const error = ref('')
+const success = ref('')
 const loading = ref(false)
 const isLoaded = ref(false)
 const showContent = ref(false)
@@ -23,61 +24,104 @@ const passwordPolicyOk = computed(() => {
 
 async function onSubmit() {
   error.value = ''
-  if (password.value !== confirmPassword.value) { error.value = 'Passwords do not match'; return }
+  success.value = ''
+  
+  if (password.value !== confirmPassword.value) { 
+    error.value = 'Passwords do not match'
+    return 
+  }
+  
   if (!passwordPolicyOk.value) { 
     const strength = getPasswordStrength(password.value)
     error.value = strength.message
     return 
   }
-  loading.value = true
-  const res = await registerLocal({ username: username.value, email: email.value, password: password.value })
-  loading.value = false
-  if (!res.ok) { error.value = res.error; return }
   
-  // 注册成功后重定向到登录页面
-  router.push('/login')
+  loading.value = true
+  console.log('开始注册...', { username: username.value, email: email.value })
+  
+  const res = await registerLocal({ username: username.value, email: email.value, password: password.value })
+  
+  console.log('注册结果:', res)
+  loading.value = false
+  
+  if (!res.ok) { 
+    console.error('注册失败:', res.error)
+    error.value = res.error
+    return 
+  }
+  
+  // 注册成功后显示成功消息
+  console.log('注册成功，显示成功消息')
+  success.value = 'Registration successful! Redirecting to login...'
+  
+  // 2秒后跳转到登录页面
+  setTimeout(() => {
+    console.log('跳转到登录页面')
+    router.push('/login')
+  }, 2000)
 }
 
 function renderGoogle() {
-  const gi = window.google && window.google.accounts && window.google.accounts.id
-  if (!gi) {
-    console.log('Google Identity Services not available')
-    return
+  const googleBtn = document.getElementById('googleBtnReg')
+  if (googleBtn) {
+    googleBtn.innerHTML = `
+      <button 
+        onclick="window.handleGoogleClickReg()" 
+        class="google-signin-btn"
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          width: 100%;
+          padding: 12px 16px;
+          border: 1px solid #dadce0;
+          border-radius: 8px;
+          background: white;
+          color: #3c4043;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        "
+        onmouseover="this.style.boxShadow='0 1px 3px rgba(0,0,0,0.12)'"
+        onmouseout="this.style.boxShadow='none'"
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18">
+          <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 002.38-5.88c0-.57-.05-.66-.15-1.18z"/>
+          <path fill="#34A853" d="M8.98 17c2.16 0 3.95-.8 5.3-2.13l-2.6-2.04a4.8 4.8 0 01-7.18-2.53H1.83v2.07A8 8 0 008.98 17z"/>
+          <path fill="#FBBC05" d="M4.5 10.3a4.8 4.8 0 010-3.02V5.21H1.83a8 8 0 000 7.17l2.67-2.08z"/>
+          <path fill="#EA4335" d="M8.98 4.5c1.16 0 2.19.4 3.01 1.2l2.42-2.42A7.8 7.8 0 008.98 1a8 8 0 00-7.15 4.21l2.67 2.07c.64-1.9 2.4-3.28 4.48-3.28z"/>
+        </svg>
+        Sign in with Google
+      </button>
+    `
+    
+    // Make the function globally available
+    window.handleGoogleClickReg = handleGoogleResponse
   }
-  
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
-  console.log('Google Client ID:', clientId ? 'Set' : 'Not set')
-  
-  if (!clientId) {
-    console.error('VITE_GOOGLE_CLIENT_ID environment variable not set')
-    return
-  }
-  
-  gi.initialize({ client_id: clientId, callback: handleGoogleResponse })
-  gi.renderButton(document.getElementById('googleBtnReg'), { theme: 'outline', size: 'large' })
 }
 
-async function handleGoogleResponse(response) {
+async function handleGoogleResponse() {
   try {
     error.value = ''
-    const res = await fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential: response.credential }) })
-    const data = await res.json()
-    if (!data.ok) { error.value = data.error || 'Google auth failed'; return }
+    loading.value = true
     
-    // Get user info from Google response
-    const email = data.profile?.email
-    const name = data.profile?.name
+    // Use the new Firebase Google sign-in function
+    const authResult = await signInWithGoogle()
+    loading.value = false
     
-    if (!email) { error.value = 'Failed to get email from Google'; return }
-    
-    // Use the signInWithGoogle function to handle user creation/login
-    const authResult = await signInWithGoogle(email, name)
-    if (!authResult.ok) { error.value = authResult.error; return }
+    if (!authResult.ok) { 
+      error.value = authResult.error; 
+      return 
+    }
     
     // Google登录成功后重定向到首页（因为Google登录是直接登录，不需要再登录）
     router.push('/')
   } catch (e) {
-    error.value = 'Network error'
+    loading.value = false
+    error.value = 'Google sign-in failed'
   }
 }
 
@@ -253,6 +297,15 @@ onMounted(async () => {
         <!-- Footer -->
         <div class="card-footer animate-fade-up" :class="{ 'animate-in': showContent }" style="animation-delay: 1.1s">
           <p class="hint">Already have an account? <router-link to="/login" class="link">Sign in</router-link></p>
+        </div>
+
+        <!-- Success Message -->
+        <div v-if="success" class="success-message animate-fade-in">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+          {{ success }}
         </div>
 
         <!-- Error Message -->
@@ -717,6 +770,26 @@ input { border: 1px solid var(--gray-200); border-radius: 8px; padding: 10px; }
   text-decoration: underline;
 }
 
+/* Success Message */
+.success-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: var(--success-color);
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  margin-top: 16px;
+}
+
+.success-message svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
 /* Error Message */
 .error-message {
   display: flex;
@@ -807,6 +880,21 @@ input { border: 1px solid var(--gray-200); border-radius: 8px; padding: 10px; }
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-5px); }
   75% { transform: translateX(5px); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Responsive Design */

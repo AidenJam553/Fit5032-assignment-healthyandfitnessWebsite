@@ -39,21 +39,43 @@ async function onSubmit() {
 }
 
 function renderGoogle() {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
-  console.log('Google Client ID:', clientId ? 'Set' : 'Not set')
-  
-  if (!clientId) {
-    console.error('VITE_GOOGLE_CLIENT_ID environment variable not set')
-    showGoogleSetupMessage()
-    return
-  }
-  
-  try {
-    // 使用简化的Google登录实现
-    createSimpleGoogleLoginButton('googleBtn', clientId)
-  } catch (err) {
-    console.error('Google initialization error:', err)
-    showGoogleSetupMessage()
+  const googleBtn = document.getElementById('googleBtn')
+  if (googleBtn) {
+    googleBtn.innerHTML = `
+      <button 
+        onclick="window.handleGoogleClick()" 
+        class="google-signin-btn"
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          width: 100%;
+          padding: 12px 16px;
+          border: 1px solid #dadce0;
+          border-radius: 8px;
+          background: white;
+          color: #3c4043;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        "
+        onmouseover="this.style.boxShadow='0 1px 3px rgba(0,0,0,0.12)'"
+        onmouseout="this.style.boxShadow='none'"
+      >
+        <svg width="18" height="18" viewBox="0 0 18 18">
+          <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 002.38-5.88c0-.57-.05-.66-.15-1.18z"/>
+          <path fill="#34A853" d="M8.98 17c2.16 0 3.95-.8 5.3-2.13l-2.6-2.04a4.8 4.8 0 01-7.18-2.53H1.83v2.07A8 8 0 008.98 17z"/>
+          <path fill="#FBBC05" d="M4.5 10.3a4.8 4.8 0 010-3.02V5.21H1.83a8 8 0 000 7.17l2.67-2.08z"/>
+          <path fill="#EA4335" d="M8.98 4.5c1.16 0 2.19.4 3.01 1.2l2.42-2.42A7.8 7.8 0 008.98 1a8 8 0 00-7.15 4.21l2.67 2.07c.64-1.9 2.4-3.28 4.48-3.28z"/>
+        </svg>
+        Sign in with Google
+      </button>
+    `
+    
+    // Make the function globally available
+    window.handleGoogleClick = handleGoogleResponse
   }
 }
 
@@ -95,27 +117,25 @@ function showGoogleSetupMessage() {
   }
 }
 
-async function handleGoogleResponse(response) {
+async function handleGoogleResponse() {
   try {
     error.value = ''
-    const res = await fetch('/api/auth/google', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential: response.credential }) })
-    const data = await res.json()
-    if (!data.ok) { error.value = data.error || 'Google auth failed'; return }
+    loading.value = true
     
-    // Get user info from Google response
-    const email = data.profile?.email
-    const name = data.profile?.name
+    // Use the new Firebase Google sign-in function
+    const authResult = await signInWithGoogle()
+    loading.value = false
     
-    if (!email) { error.value = 'Failed to get email from Google'; return }
-    
-    // Use the signInWithGoogle function to handle user creation/login
-    const authResult = signInWithGoogle(email, name)
-    if (!authResult.ok) { error.value = authResult.error; return }
+    if (!authResult.ok) { 
+      error.value = authResult.error; 
+      return 
+    }
     
     // Redirect to appropriate page based on user role
     router.push(getRedirectForUser(authResult.user))
   } catch (e) {
-    error.value = 'Network error'
+    loading.value = false
+    error.value = 'Google sign-in failed'
   }
 }
 

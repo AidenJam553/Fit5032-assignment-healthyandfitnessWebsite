@@ -29,3 +29,15 @@ VITE_FIREBASE_APP_ID=1:932482057735:web:a6213d43e47a7bbf278ca2
 
 # API Configuration
 VITE_API_URL=http://localhost:5175/api
+
+# SendGrid Email Configuration
+# Get your API key from https://app.sendgrid.com/settings/api_keys
+SENDGRID_API_KEY=your_sendgrid_api_key_here
+SENDGRID_FROM_EMAIL=your_verified_sender_email@example.com
+
+# Admin Account Configuration (Optional)
+ADMIN_EMAIL=admin@admin.com
+ADMIN_PASSWORD=Admin123
+
+
+
