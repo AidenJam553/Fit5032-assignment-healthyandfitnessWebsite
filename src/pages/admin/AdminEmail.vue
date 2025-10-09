@@ -325,6 +325,11 @@ onMounted(() => {
   --border: #e2e8f0;
   --muted: #64748b;
 }
+
+/* Ensure all elements use border-box */
+* {
+  box-sizing: border-box;
+}
 .container { max-width: 1400px; margin: 0 auto; padding: 0 16px; }
 
 .admin__bar { background: #fff; border-bottom: 1px solid var(--gray-200); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(6px); }
@@ -374,6 +379,9 @@ onMounted(() => {
   grid-template-columns: 350px 1fr;
   gap: 24px;
   margin-top: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 @media (max-width: 1024px) {
@@ -389,6 +397,9 @@ onMounted(() => {
   border-radius: 12px;
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .card h2 {
@@ -530,10 +541,13 @@ onMounted(() => {
 /* Email Form */
 .email-form {
   height: fit-content;
+  overflow: hidden;
 }
 
 .form-group {
   margin-bottom: 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-group label {
@@ -550,12 +564,14 @@ onMounted(() => {
 
 .form-control {
   width: 100%;
+  max-width: 100%;
   padding: 10px 14px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
 }
 
 .form-control:focus {
@@ -568,6 +584,9 @@ textarea.form-control {
   resize: vertical;
   min-height: 100px;
   font-family: monospace;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .form-text {
@@ -598,12 +617,14 @@ textarea.form-control {
 .form-control-file {
   display: block;
   width: 100%;
+  max-width: 100%;
   padding: 10px;
   border: 2px dashed #d1d5db;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
   transition: border-color 0.2s;
+  box-sizing: border-box;
 }
 
 .form-control-file:hover {
