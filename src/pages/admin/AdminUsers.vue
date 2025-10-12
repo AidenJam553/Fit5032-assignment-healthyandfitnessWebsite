@@ -16,16 +16,105 @@ const selectedUsers = ref([])
 const showDeleteModal = ref(false)
 const userToDelete = ref(null)
 
-// 计算属性
+// 列搜索状态 - BR (D.3): Individual column search
+const columnSearch = ref({
+  username: '',
+  email: '',
+  role: '',
+  provider: '',
+  createdAt: ''
+})
+
+// 排序状态 - BR (D.3): Sort functionality
+const sortColumn = ref('createdAt')
+const sortOrder = ref('desc') // 'asc' or 'desc'
+
+// 分页状态 - BR (D.3): Pagination with 10 rows per page
+const currentPage = ref(1)
+const itemsPerPage = 10
+
+// 计算属性 - 过滤
 const filteredUsers = computed(() => {
-  if (!searchQuery.value) return users.value
+  let result = [...users.value]
   
-  const query = searchQuery.value.toLowerCase()
-  return users.value.filter(user => 
-    user.username?.toLowerCase().includes(query) ||
-    user.email?.toLowerCase().includes(query) ||
-    user.role?.toLowerCase().includes(query)
-  )
+  // 全局搜索
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    result = result.filter(user => 
+      user.username?.toLowerCase().includes(query) ||
+      user.email?.toLowerCase().includes(query) ||
+      user.role?.toLowerCase().includes(query) ||
+      user.provider?.toLowerCase().includes(query)
+    )
+  }
+  
+  // 按列搜索 - BR (D.3): Search by individual column
+  if (columnSearch.value.username) {
+    const query = columnSearch.value.username.toLowerCase()
+    result = result.filter(user => user.username?.toLowerCase().includes(query))
+  }
+  
+  if (columnSearch.value.email) {
+    const query = columnSearch.value.email.toLowerCase()
+    result = result.filter(user => user.email?.toLowerCase().includes(query))
+  }
+  
+  if (columnSearch.value.role) {
+    const query = columnSearch.value.role.toLowerCase()
+    result = result.filter(user => user.role?.toLowerCase().includes(query))
+  }
+  
+  if (columnSearch.value.provider) {
+    const query = columnSearch.value.provider.toLowerCase()
+    result = result.filter(user => user.provider?.toLowerCase().includes(query))
+  }
+  
+  if (columnSearch.value.createdAt) {
+    const query = columnSearch.value.createdAt.toLowerCase()
+    result = result.filter(user => {
+      const dateStr = formatDate(user.createdAt).toLowerCase()
+      return dateStr.includes(query)
+    })
+  }
+  
+  return result
+})
+
+// 计算属性 - 排序 - BR (D.3): Sort functionality
+const sortedUsers = computed(() => {
+  const result = [...filteredUsers.value]
+  
+  result.sort((a, b) => {
+    let aVal = a[sortColumn.value]
+    let bVal = b[sortColumn.value]
+    
+    // 处理 undefined/null 值
+    if (aVal === undefined || aVal === null) aVal = ''
+    if (bVal === undefined || bVal === null) bVal = ''
+    
+    // 转换为字符串进行比较
+    aVal = String(aVal).toLowerCase()
+    bVal = String(bVal).toLowerCase()
+    
+    if (sortOrder.value === 'asc') {
+      return aVal > bVal ? 1 : aVal < bVal ? -1 : 0
+    } else {
+      return aVal < bVal ? 1 : aVal > bVal ? -1 : 0
+    }
+  })
+  
+  return result
+})
+
+// 计算属性 - 分页 - BR (D.3): Limit to 10 rows per page
+const paginatedUsers = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return sortedUsers.value.slice(start, end)
+})
+
+const totalPages = computed(() => {
+  return Math.ceil(sortedUsers.value.length / itemsPerPage)
 })
 
 const totalUsers = computed(() => users.value.length)
@@ -49,30 +138,113 @@ async function loadUsers() {
   }
 }
 
-// 删除用户
+// 删除用户 - 调用后端 API 同时删除 Auth 和 Firestore
 async function deleteUser(user) {
   console.log('Delete user called with:', user)
   
-  if (!confirm(`Are you sure you want to delete user "${user.username || user.email}"?`)) {
+  const confirmMessage = `Are you sure you want to delete user "${user.username || user.email}"?\n\nThis action CANNOT be undone!`
+  
+  if (!confirm(confirmMessage)) {
     return
   }
   
+  loading.value = true
+  
   try {
-    console.log('Calling userService.deleteUser with ID:', user.id)
-    const result = await userService.deleteUser(user.id)
+    console.log('Calling backend API to delete user:', user.id)
+    
+    // Call backend API to delete from both Auth and Firestore
+    const response = await fetch(`http://localhost:5175/api/admin/user/${user.id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    const result = await response.json()
     console.log('Delete result:', result)
     
     if (result.ok) {
       // 从列表中移除用户
       users.value = users.value.filter(u => u.id !== user.id)
-      showSuccessMessage(`User "${user.username || user.email}" deleted successfully`)
+      
+      let message = result.message || 'User deleted successfully'
+      if (result.details?.warnings && result.details.warnings.length > 0) {
+        message += '\n\nWarnings:\n' + result.details.warnings.join('\n')
+      }
+      
+      showSuccessMessage(`✅ ${message}\n\nUser: "${user.username || user.email}"`)
     } else {
-      showErrorMessage(`Failed to delete user: ${result.error}`)
+      let errorMessage = result.error || 'Failed to delete user'
+      if (result.warnings && result.warnings.length > 0) {
+        errorMessage += '\n\nDetails:\n' + result.warnings.join('\n')
+      }
+      showErrorMessage(`❌ ${errorMessage}`)
     }
   } catch (err) {
     console.error('Error deleting user:', err)
-    showErrorMessage('Failed to delete user')
+    showErrorMessage(`❌ Failed to delete user: ${err.message || 'Server connection error. Make sure the backend is running on port 5175.'}\n\nTip: Run 'npm run server' to start the backend.`)
+  } finally {
+    loading.value = false
   }
+}
+
+// 排序功能 - BR (D.3): Sort functionality
+function sortBy(column) {
+  if (sortColumn.value === column) {
+    // 同一列，切换排序顺序
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    // 不同列，默认降序
+    sortColumn.value = column
+    sortOrder.value = 'desc'
+  }
+  // 排序后重置到第一页
+  currentPage.value = 1
+}
+
+// 获取排序图标
+function getSortIcon(column) {
+  if (sortColumn.value !== column) return '⇅'
+  return sortOrder.value === 'asc' ? '↑' : '↓'
+}
+
+// 分页功能 - BR (D.3): Pagination controls
+function goToPage(page) {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
+}
+
+function nextPage() {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
+
+function prevPage() {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
+}
+
+// 清除所有搜索
+function clearAllSearch() {
+  searchQuery.value = ''
+  columnSearch.value = {
+    username: '',
+    email: '',
+    role: '',
+    provider: '',
+    createdAt: ''
+  }
+  currentPage.value = 1
+}
+
+// 清除列搜索
+function clearColumnSearch(column) {
+  columnSearch.value[column] = ''
+  currentPage.value = 1
 }
 
 // 用户角色只读 - 不允许修改
@@ -88,12 +260,12 @@ function toggleUserSelection(userId) {
   }
 }
 
-// 全选/取消全选
+// 全选/取消全选（当前页）
 function toggleSelectAll() {
-  if (selectedUsers.value.length === filteredUsers.value.length) {
+  if (selectedUsers.value.length === paginatedUsers.value.length && paginatedUsers.value.length > 0) {
     selectedUsers.value = []
   } else {
-    selectedUsers.value = filteredUsers.value.map(user => user.id)
+    selectedUsers.value = paginatedUsers.value.map(user => user.id)
   }
 }
 
@@ -211,15 +383,23 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- 搜索和操作栏 -->
+      <!-- 搜索和操作栏 - BR (D.3): Search functionality -->
       <div class="toolbar">
         <div class="search-container">
           <input 
             v-model="searchQuery" 
             type="text" 
-            placeholder="Search users by name, email, or role..."
+            placeholder="Global search (name, email, role, provider)..."
             class="search-input"
           />
+          <button 
+            v-if="searchQuery || Object.values(columnSearch).some(v => v)"
+            @click="clearAllSearch"
+            class="clear-search-btn"
+            title="Clear all search filters"
+          >
+            ✕ Clear All
+          </button>
         </div>
         <div class="toolbar-actions">
           <Button 
@@ -231,6 +411,11 @@ onMounted(() => {
             Delete Selected ({{ selectedUsers.length }})
           </Button>
         </div>
+      </div>
+
+      <!-- 搜索结果信息 - BR (D.3): Display filtered results -->
+      <div class="search-info">
+        <span>Showing {{ paginatedUsers.length }} of {{ sortedUsers.length }} users (Total: {{ totalUsers }})</span>
       </div>
 
       <!-- 用户列表 -->
@@ -245,31 +430,144 @@ onMounted(() => {
           <Button variant="primary" size="medium" @click="loadUsers">Retry</Button>
         </div>
 
-        <div v-else-if="filteredUsers.length === 0" class="empty-state">
+        <div v-else-if="sortedUsers.length === 0" class="empty-state">
           <p>No users found</p>
         </div>
 
         <div v-else class="users-table">
           <table>
             <thead>
+              <!-- BR (D.3): Sortable column headers -->
               <tr>
                 <th class="checkbox-column">
                   <input 
                     type="checkbox" 
-                    :checked="selectedUsers.length === filteredUsers.length && filteredUsers.length > 0"
+                    :checked="selectedUsers.length === paginatedUsers.length && paginatedUsers.length > 0"
                     @change="toggleSelectAll"
                   />
                 </th>
-                <th>User</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Provider</th>
-                <th>Created</th>
+                <th class="sortable" @click="sortBy('username')">
+                  User {{ getSortIcon('username') }}
+                </th>
+                <th class="sortable" @click="sortBy('email')">
+                  Email {{ getSortIcon('email') }}
+                </th>
+                <th class="sortable" @click="sortBy('role')">
+                  Role {{ getSortIcon('role') }}
+                </th>
+                <th class="sortable" @click="sortBy('provider')">
+                  Provider {{ getSortIcon('provider') }}
+                </th>
+                <th class="sortable" @click="sortBy('createdAt')">
+                  Created {{ getSortIcon('createdAt') }}
+                </th>
                 <th>Actions</th>
+              </tr>
+              
+              <!-- BR (D.3): Individual column search -->
+              <tr class="column-search-row">
+                <th class="checkbox-column"></th>
+                <th>
+                  <div class="column-search">
+                    <input 
+                      v-model="columnSearch.username"
+                      type="text" 
+                      placeholder="Search username..."
+                      class="column-search-input"
+                      @input="currentPage = 1"
+                    />
+                    <button 
+                      v-if="columnSearch.username"
+                      @click="clearColumnSearch('username')"
+                      class="clear-column-btn"
+                      title="Clear"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </th>
+                <th>
+                  <div class="column-search">
+                    <input 
+                      v-model="columnSearch.email"
+                      type="text" 
+                      placeholder="Search email..."
+                      class="column-search-input"
+                      @input="currentPage = 1"
+                    />
+                    <button 
+                      v-if="columnSearch.email"
+                      @click="clearColumnSearch('email')"
+                      class="clear-column-btn"
+                      title="Clear"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </th>
+                <th>
+                  <div class="column-search">
+                    <input 
+                      v-model="columnSearch.role"
+                      type="text" 
+                      placeholder="Search role..."
+                      class="column-search-input"
+                      @input="currentPage = 1"
+                    />
+                    <button 
+                      v-if="columnSearch.role"
+                      @click="clearColumnSearch('role')"
+                      class="clear-column-btn"
+                      title="Clear"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </th>
+                <th>
+                  <div class="column-search">
+                    <input 
+                      v-model="columnSearch.provider"
+                      type="text" 
+                      placeholder="Search provider..."
+                      class="column-search-input"
+                      @input="currentPage = 1"
+                    />
+                    <button 
+                      v-if="columnSearch.provider"
+                      @click="clearColumnSearch('provider')"
+                      class="clear-column-btn"
+                      title="Clear"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </th>
+                <th>
+                  <div class="column-search">
+                    <input 
+                      v-model="columnSearch.createdAt"
+                      type="text" 
+                      placeholder="Search date..."
+                      class="column-search-input"
+                      @input="currentPage = 1"
+                    />
+                    <button 
+                      v-if="columnSearch.createdAt"
+                      @click="clearColumnSearch('createdAt')"
+                      class="clear-column-btn"
+                      title="Clear"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="user in filteredUsers" :key="user.id" class="user-row">
+              <!-- BR (D.3): Display paginated results (10 per page) -->
+              <tr v-for="user in paginatedUsers" :key="user.id" class="user-row">
                 <td class="checkbox-column">
                   <input 
                     type="checkbox" 
@@ -308,6 +606,63 @@ onMounted(() => {
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- BR (D.3): Pagination controls - 10 rows per page -->
+      <div v-if="sortedUsers.length > 0" class="pagination">
+        <div class="pagination-info">
+          Page {{ currentPage }} of {{ totalPages }} 
+          ({{ sortedUsers.length }} total {{ sortedUsers.length === 1 ? 'user' : 'users' }})
+        </div>
+        <div class="pagination-controls">
+          <button 
+            @click="goToPage(1)" 
+            :disabled="currentPage === 1"
+            class="pagination-btn"
+            title="First page"
+          >
+            ⟨⟨
+          </button>
+          <button 
+            @click="prevPage" 
+            :disabled="currentPage === 1"
+            class="pagination-btn"
+            title="Previous page"
+          >
+            ⟨
+          </button>
+          
+          <!-- 页码按钮 -->
+          <template v-for="page in totalPages" :key="page">
+            <button 
+              v-if="page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)"
+              @click="goToPage(page)"
+              :class="['pagination-btn', { active: page === currentPage }]"
+            >
+              {{ page }}
+            </button>
+            <span v-else-if="page === currentPage - 3 || page === currentPage + 3" class="pagination-ellipsis">
+              ...
+            </span>
+          </template>
+          
+          <button 
+            @click="nextPage" 
+            :disabled="currentPage === totalPages"
+            class="pagination-btn"
+            title="Next page"
+          >
+            ⟩
+          </button>
+          <button 
+            @click="goToPage(totalPages)" 
+            :disabled="currentPage === totalPages"
+            class="pagination-btn"
+            title="Last page"
+          >
+            ⟩⟩
+          </button>
         </div>
       </div>
     </main>
@@ -415,17 +770,21 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   gap: 16px;
 }
 
 .search-container {
   flex: 1;
-  max-width: 400px;
+  max-width: 500px;
+  position: relative;
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .search-input {
-  width: 100%;
+  flex: 1;
   padding: 12px 16px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
@@ -439,9 +798,38 @@ onMounted(() => {
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
+.clear-search-btn {
+  padding: 8px 16px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.clear-search-btn:hover {
+  background: #dc2626;
+}
+
 .toolbar-actions {
   display: flex;
   gap: 12px;
+}
+
+/* 搜索结果信息 */
+.search-info {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  color: #166534;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 /* 用户容器 */
@@ -499,6 +887,73 @@ onMounted(() => {
   font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* BR (D.3): Sortable column headers */
+.users-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+
+.users-table th.sortable:hover {
+  background: #e2e8f0;
+}
+
+/* BR (D.3): Column search row */
+.column-search-row th {
+  padding: 8px 12px;
+  background: #ffffff;
+  border-bottom: 2px solid #10b981;
+}
+
+.column-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.column-search-input {
+  width: 100%;
+  padding: 6px 28px 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  transition: border-color 0.2s;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.column-search-input:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+}
+
+.clear-column-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0;
+  transition: background 0.2s;
+}
+
+.clear-column-btn:hover {
+  background: #dc2626;
 }
 
 .checkbox-column {
@@ -596,6 +1051,67 @@ onMounted(() => {
   background: #f8fafc;
 }
 
+/* BR (D.3): Pagination controls */
+.pagination {
+  margin-top: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-info {
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.pagination-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.pagination-btn {
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 40px;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #10b981;
+  color: #10b981;
+}
+
+.pagination-btn.active {
+  background: #10b981;
+  border-color: #10b981;
+  color: white;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination-ellipsis {
+  padding: 8px 4px;
+  color: #9ca3af;
+  font-size: 0.875rem;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .page-header {
@@ -615,6 +1131,11 @@ onMounted(() => {
   
   .search-container {
     max-width: none;
+    flex-direction: column;
+  }
+  
+  .clear-search-btn {
+    width: 100%;
   }
   
   .users-table {
@@ -624,6 +1145,27 @@ onMounted(() => {
   .users-table th,
   .users-table td {
     padding: 12px 8px;
+  }
+  
+  .column-search-input {
+    font-size: 0.7rem;
+    padding: 4px 24px 4px 6px;
+  }
+  
+  .pagination {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .pagination-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .pagination-btn {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    min-width: 36px;
   }
 }
 </style>

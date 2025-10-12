@@ -17,16 +17,115 @@ const showRatingModal = ref(false)
 const selectedCourse = ref(null)
 const courseRatings = ref([])
 
-// 计算属性
+// 列搜索状态 - BR (D.3): Individual column search
+const columnSearch = ref({
+  title: '',
+  topic: '',
+  difficulty: '',
+  minutes: '',
+  rating: ''
+})
+
+// 排序状态 - BR (D.3): Sort functionality
+const sortColumn = ref('title')
+const sortOrder = ref('asc') // 'asc' or 'desc'
+
+// 分页状态 - BR (D.3): Pagination with 10 rows per page
+const currentPage = ref(1)
+const itemsPerPage = 10
+
+// 计算属性 - 过滤
 const filteredCourses = computed(() => {
-  if (!searchQuery.value) return courses.value
+  let result = [...courses.value]
   
-  const query = searchQuery.value.toLowerCase()
-  return courses.value.filter(course => 
-    course.title?.toLowerCase().includes(query) ||
-    course.topic?.toLowerCase().includes(query) ||
-    course.difficulty?.toLowerCase().includes(query)
-  )
+  // 全局搜索
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    result = result.filter(course => 
+      course.title?.toLowerCase().includes(query) ||
+      course.topic?.toLowerCase().includes(query) ||
+      course.difficulty?.toLowerCase().includes(query) ||
+      course.description?.toLowerCase().includes(query)
+    )
+  }
+  
+  // 按列搜索 - BR (D.3): Search by individual column
+  if (columnSearch.value.title) {
+    const query = columnSearch.value.title.toLowerCase()
+    result = result.filter(course => course.title?.toLowerCase().includes(query))
+  }
+  
+  if (columnSearch.value.topic) {
+    const query = columnSearch.value.topic.toLowerCase()
+    result = result.filter(course => course.topic?.toLowerCase().includes(query))
+  }
+  
+  if (columnSearch.value.difficulty) {
+    const query = columnSearch.value.difficulty.toLowerCase()
+    result = result.filter(course => course.difficulty?.toLowerCase().includes(query))
+  }
+  
+  if (columnSearch.value.minutes) {
+    const query = columnSearch.value.minutes.toLowerCase()
+    result = result.filter(course => String(course.minutes || '').includes(query))
+  }
+  
+  if (columnSearch.value.rating) {
+    const query = columnSearch.value.rating.toLowerCase()
+    result = result.filter(course => {
+      const rating = (course.averageRating || 0).toFixed(1)
+      return rating.includes(query)
+    })
+  }
+  
+  return result
+})
+
+// 计算属性 - 排序 - BR (D.3): Sort functionality
+const sortedCourses = computed(() => {
+  const result = [...filteredCourses.value]
+  
+  result.sort((a, b) => {
+    let aVal = a[sortColumn.value]
+    let bVal = b[sortColumn.value]
+    
+    // 特殊处理评分
+    if (sortColumn.value === 'rating') {
+      aVal = a.averageRating || 0
+      bVal = b.averageRating || 0
+    }
+    
+    // 处理 undefined/null 值
+    if (aVal === undefined || aVal === null) aVal = ''
+    if (bVal === undefined || bVal === null) bVal = ''
+    
+    // 数字类型直接比较，字符串转小写比较
+    if (typeof aVal === 'number' && typeof bVal === 'number') {
+      return sortOrder.value === 'asc' ? aVal - bVal : bVal - aVal
+    }
+    
+    aVal = String(aVal).toLowerCase()
+    bVal = String(bVal).toLowerCase()
+    
+    if (sortOrder.value === 'asc') {
+      return aVal > bVal ? 1 : aVal < bVal ? -1 : 0
+    } else {
+      return aVal < bVal ? 1 : aVal > bVal ? -1 : 0
+    }
+  })
+  
+  return result
+})
+
+// 计算属性 - 分页 - BR (D.3): Limit to 10 rows per page
+const paginatedCourses = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return sortedCourses.value.slice(start, end)
+})
+
+const totalPages = computed(() => {
+  return Math.ceil(sortedCourses.value.length / itemsPerPage)
 })
 
 const totalCourses = computed(() => courses.value.length)
@@ -132,6 +231,61 @@ function getCourseRatingDistribution(course) {
   return getRatingDistribution(course.ratings)
 }
 
+// 排序功能 - BR (D.3): Sort functionality
+function sortBy(column) {
+  if (sortColumn.value === column) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortColumn.value = column
+    sortOrder.value = 'asc'
+  }
+  currentPage.value = 1
+}
+
+// 获取排序图标
+function getSortIcon(column) {
+  if (sortColumn.value !== column) return '⇅'
+  return sortOrder.value === 'asc' ? '↑' : '↓'
+}
+
+// 分页功能 - BR (D.3): Pagination controls
+function goToPage(page) {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
+}
+
+function nextPage() {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
+
+function prevPage() {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
+}
+
+// 清除所有搜索
+function clearAllSearch() {
+  searchQuery.value = ''
+  columnSearch.value = {
+    title: '',
+    topic: '',
+    difficulty: '',
+    minutes: '',
+    rating: ''
+  }
+  currentPage.value = 1
+}
+
+// 清除列搜索
+function clearColumnSearch(column) {
+  columnSearch.value[column] = ''
+  currentPage.value = 1
+}
+
 // 切换课程选择
 function toggleCourseSelection(courseId) {
   const index = selectedCourses.value.indexOf(courseId)
@@ -142,12 +296,12 @@ function toggleCourseSelection(courseId) {
   }
 }
 
-// 全选/取消全选
+// 全选/取消全选（当前页）
 function toggleSelectAll() {
-  if (selectedCourses.value.length === filteredCourses.value.length) {
+  if (selectedCourses.value.length === paginatedCourses.value.length && paginatedCourses.value.length > 0) {
     selectedCourses.value = []
   } else {
-    selectedCourses.value = filteredCourses.value.map(course => course.id)
+    selectedCourses.value = paginatedCourses.value.map(course => course.id)
   }
 }
 
@@ -264,15 +418,23 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- 搜索和操作栏 -->
+      <!-- 搜索和操作栏 - BR (D.3): Search functionality -->
       <div class="toolbar">
         <div class="search-container">
           <input 
             v-model="searchQuery" 
             type="text" 
-            placeholder="Search courses by title, topic, or difficulty..."
+            placeholder="Global search (title, topic, difficulty, description)..."
             class="search-input"
           />
+          <button 
+            v-if="searchQuery || Object.values(columnSearch).some(v => v)"
+            @click="clearAllSearch"
+            class="clear-search-btn"
+            title="Clear all search filters"
+          >
+            ✕ Clear All
+          </button>
         </div>
         <div class="toolbar-actions">
           <Button 
@@ -286,7 +448,12 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- 课程列表 -->
+      <!-- 搜索结果信息 - BR (D.3): Display filtered results -->
+      <div class="search-info">
+        <span>Showing {{ paginatedCourses.length }} of {{ sortedCourses.length }} courses (Total: {{ totalCourses }})</span>
+      </div>
+
+      <!-- 课程列表 - BR (D.3): Interactive Table -->
       <div class="courses-container">
         <div v-if="loading" class="loading-state">
           <div class="loading-spinner"></div>
@@ -298,81 +465,256 @@ onMounted(() => {
           <Button variant="primary" size="medium" @click="loadCourses">Retry</Button>
         </div>
 
-        <div v-else-if="filteredCourses.length === 0" class="empty-state">
+        <div v-else-if="sortedCourses.length === 0" class="empty-state">
           <p>No courses found</p>
         </div>
 
-        <div v-else class="courses-grid">
-          <div v-for="course in filteredCourses" :key="course.id" class="course-card">
-            <div class="course-header">
-              <div class="course-checkbox">
-                <input 
-                  type="checkbox" 
-                  :checked="selectedCourses.includes(course.id)"
-                  @change="toggleCourseSelection(course.id)"
-                />
-              </div>
-              <div class="course-actions">
-                <Button 
-                  variant="secondary" 
-                  size="small" 
-                  @click="viewCourseRatings(course)"
-                >
-                  View Ratings
-                </Button>
-                <Button 
-                  variant="danger" 
-                  size="small" 
-                  @click="deleteCourse(course)"
-                >
-                  Delete
-                </Button>
-              </div>
-            </div>
-
-            <div class="course-content">
-              <h3 class="course-title">{{ course.title }}</h3>
-              <p class="course-description">{{ course.description }}</p>
+        <div v-else class="courses-table">
+          <table>
+            <thead>
+              <!-- BR (D.3): Sortable column headers -->
+              <tr>
+                <th class="checkbox-column">
+                  <input 
+                    type="checkbox" 
+                    :checked="selectedCourses.length === paginatedCourses.length && paginatedCourses.length > 0"
+                    @change="toggleSelectAll"
+                  />
+                </th>
+                <th class="sortable" @click="sortBy('title')">
+                  Course Title {{ getSortIcon('title') }}
+                </th>
+                <th class="sortable" @click="sortBy('topic')">
+                  Topic {{ getSortIcon('topic') }}
+                </th>
+                <th class="sortable" @click="sortBy('difficulty')">
+                  Difficulty {{ getSortIcon('difficulty') }}
+                </th>
+                <th class="sortable" @click="sortBy('minutes')">
+                  Duration {{ getSortIcon('minutes') }}
+                </th>
+                <th class="sortable" @click="sortBy('rating')">
+                  Rating {{ getSortIcon('rating') }}
+                </th>
+                <th>Actions</th>
+              </tr>
               
-              <div class="course-meta">
-                <span class="course-topic">{{ course.topic }}</span>
-                <span class="course-difficulty" :class="getDifficultyClass(course.difficulty)">
-                  {{ course.difficulty }}
-                </span>
-                <span class="course-duration">{{ course.minutes }} min</span>
-              </div>
-
-              <!-- 评分信息 -->
-              <div class="course-ratings">
-                <div class="rating-summary">
-                  <div class="rating-stars">
-                    <span v-for="i in 5" :key="i" class="star" :class="{ 'filled': i <= Math.round(course.averageRating || 0) }">
-                      ★
-                    </span>
+              <!-- BR (D.3): Individual column search -->
+              <tr class="column-search-row">
+                <th class="checkbox-column"></th>
+                <th>
+                  <div class="column-search">
+                    <input 
+                      v-model="columnSearch.title"
+                      type="text" 
+                      placeholder="Search title..."
+                      class="column-search-input"
+                      @input="currentPage = 1"
+                    />
+                    <button 
+                      v-if="columnSearch.title"
+                      @click="clearColumnSearch('title')"
+                      class="clear-column-btn"
+                      title="Clear"
+                    >
+                      ✕
+                    </button>
                   </div>
-                  <span class="rating-text">
-                    {{ (course.averageRating || 0).toFixed(1) }} ({{ course.ratingCount || 0 }} ratings)
+                </th>
+                <th>
+                  <div class="column-search">
+                    <input 
+                      v-model="columnSearch.topic"
+                      type="text" 
+                      placeholder="Search topic..."
+                      class="column-search-input"
+                      @input="currentPage = 1"
+                    />
+                    <button 
+                      v-if="columnSearch.topic"
+                      @click="clearColumnSearch('topic')"
+                      class="clear-column-btn"
+                      title="Clear"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </th>
+                <th>
+                  <div class="column-search">
+                    <input 
+                      v-model="columnSearch.difficulty"
+                      type="text" 
+                      placeholder="Search..."
+                      class="column-search-input"
+                      @input="currentPage = 1"
+                    />
+                    <button 
+                      v-if="columnSearch.difficulty"
+                      @click="clearColumnSearch('difficulty')"
+                      class="clear-column-btn"
+                      title="Clear"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </th>
+                <th>
+                  <div class="column-search">
+                    <input 
+                      v-model="columnSearch.minutes"
+                      type="text" 
+                      placeholder="Search..."
+                      class="column-search-input"
+                      @input="currentPage = 1"
+                    />
+                    <button 
+                      v-if="columnSearch.minutes"
+                      @click="clearColumnSearch('minutes')"
+                      class="clear-column-btn"
+                      title="Clear"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </th>
+                <th>
+                  <div class="column-search">
+                    <input 
+                      v-model="columnSearch.rating"
+                      type="text" 
+                      placeholder="Search..."
+                      class="column-search-input"
+                      @input="currentPage = 1"
+                    />
+                    <button 
+                      v-if="columnSearch.rating"
+                      @click="clearColumnSearch('rating')"
+                      class="clear-column-btn"
+                      title="Clear"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- BR (D.3): Display paginated results (10 per page) -->
+              <tr v-for="course in paginatedCourses" :key="course.id" class="course-row">
+                <td class="checkbox-column">
+                  <input 
+                    type="checkbox" 
+                    :checked="selectedCourses.includes(course.id)"
+                    @change="toggleCourseSelection(course.id)"
+                  />
+                </td>
+                <td class="course-title-cell">
+                  <div class="course-title-content">
+                    <div class="course-title-text">{{ course.title }}</div>
+                    <div class="course-description">{{ course.description }}</div>
+                  </div>
+                </td>
+                <td class="course-topic">
+                  <span class="topic-badge">{{ course.topic }}</span>
+                </td>
+                <td class="course-difficulty">
+                  <span class="difficulty-badge" :class="getDifficultyClass(course.difficulty)">
+                    {{ course.difficulty }}
                   </span>
-                </div>
-
-                <!-- 评分分布图 -->
-                <div class="rating-distribution">
-                  <div v-for="star in [5, 4, 3, 2, 1]" :key="star" class="rating-bar">
-                    <span class="star-label">{{ star }}★</span>
-                    <div class="bar-container">
-                      <div 
-                        class="bar-fill" 
-                        :style="{ 
-                          width: course.ratingCount > 0 ? `${(getCourseRatingDistribution(course)[star] / course.ratingCount) * 100}%` : '0%' 
-                        }"
-                      ></div>
+                </td>
+                <td class="course-duration">
+                  <span class="duration-badge">{{ course.minutes }} min</span>
+                </td>
+                <td class="course-rating">
+                  <div class="rating-display">
+                    <div class="rating-stars-small">
+                      <span v-for="i in 5" :key="i" class="star-small" :class="{ 'filled': i <= Math.round(course.averageRating || 0) }">
+                        ★
+                      </span>
                     </div>
-                    <span class="bar-count">{{ getCourseRatingDistribution(course)[star] }}</span>
+                    <div class="rating-text-small">
+                      {{ (course.averageRating || 0).toFixed(1) }} ({{ course.ratingCount || 0 }})
+                    </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
+                </td>
+                <td class="course-actions">
+                  <Button 
+                    variant="secondary" 
+                    size="small" 
+                    @click="viewCourseRatings(course)"
+                  >
+                    Ratings
+                  </Button>
+                  <Button 
+                    variant="danger" 
+                    size="small" 
+                    @click="deleteCourse(course)"
+                  >
+                    Delete
+                  </Button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- BR (D.3): Pagination controls - 10 rows per page -->
+      <div v-if="sortedCourses.length > 0" class="pagination">
+        <div class="pagination-info">
+          Page {{ currentPage }} of {{ totalPages }} 
+          ({{ sortedCourses.length }} total {{ sortedCourses.length === 1 ? 'course' : 'courses' }})
+        </div>
+        <div class="pagination-controls">
+          <button 
+            @click="goToPage(1)" 
+            :disabled="currentPage === 1"
+            class="pagination-btn"
+            title="First page"
+          >
+            ⟨⟨
+          </button>
+          <button 
+            @click="prevPage" 
+            :disabled="currentPage === 1"
+            class="pagination-btn"
+            title="Previous page"
+          >
+            ⟨
+          </button>
+          
+          <!-- 页码按钮 -->
+          <template v-for="page in totalPages" :key="page">
+            <button 
+              v-if="page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)"
+              @click="goToPage(page)"
+              :class="['pagination-btn', { active: page === currentPage }]"
+            >
+              {{ page }}
+            </button>
+            <span v-else-if="page === currentPage - 3 || page === currentPage + 3" class="pagination-ellipsis">
+              ...
+            </span>
+          </template>
+          
+          <button 
+            @click="nextPage" 
+            :disabled="currentPage === totalPages"
+            class="pagination-btn"
+            title="Next page"
+          >
+            ⟩
+          </button>
+          <button 
+            @click="goToPage(totalPages)" 
+            :disabled="currentPage === totalPages"
+            class="pagination-btn"
+            title="Last page"
+          >
+            ⟩⟩
+          </button>
         </div>
       </div>
 
@@ -539,17 +881,21 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   gap: 16px;
 }
 
 .search-container {
   flex: 1;
-  max-width: 400px;
+  max-width: 500px;
+  position: relative;
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .search-input {
-  width: 100%;
+  flex: 1;
   padding: 12px 16px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
@@ -563,14 +909,47 @@ onMounted(() => {
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
+.clear-search-btn {
+  padding: 8px 16px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.clear-search-btn:hover {
+  background: #dc2626;
+}
+
 .toolbar-actions {
   display: flex;
   gap: 12px;
 }
 
+/* 搜索结果信息 */
+.search-info {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  color: #166534;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
 /* 课程容器 */
 .courses-container {
-  margin-bottom: 24px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* 加载状态 */
@@ -595,36 +974,211 @@ onMounted(() => {
   100% { transform: rotate(360deg); }
 }
 
-/* 课程网格 */
-.courses-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 20px;
+/* BR (D.3): Course Table */
+.courses-table {
+  overflow-x: auto;
 }
 
-/* 课程卡片 */
-.course-card {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.2s;
+.courses-table table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.course-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.courses-table th,
+.courses-table td {
+  padding: 16px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.course-header {
+.courses-table th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* BR (D.3): Sortable column headers */
+.courses-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+
+.courses-table th.sortable:hover {
+  background: #e2e8f0;
+}
+
+/* BR (D.3): Column search row */
+.column-search-row th {
+  padding: 8px 12px;
+  background: #ffffff;
+  border-bottom: 2px solid #10b981;
+}
+
+.column-search {
+  position: relative;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  gap: 4px;
 }
 
-.course-checkbox input {
-  margin-right: 8px;
+.column-search-input {
+  width: 100%;
+  padding: 6px 28px 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  transition: border-color 0.2s;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.column-search-input:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+}
+
+.clear-column-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0;
+  transition: background 0.2s;
+}
+
+.clear-column-btn:hover {
+  background: #dc2626;
+}
+
+.checkbox-column {
+  width: 40px;
+  text-align: center;
+}
+
+/* 课程标题单元格 */
+.course-title-cell {
+  min-width: 250px;
+}
+
+.course-title-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.course-title-text {
+  font-weight: 600;
+  color: #111827;
+  font-size: 1rem;
+}
+
+.course-description {
+  color: #6b7280;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 徽章样式 */
+.topic-badge {
+  display: inline-block;
+  background: #f3f4f6;
+  color: #374151;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.difficulty-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.difficulty-beginner {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.difficulty-intermediate {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.difficulty-advanced {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.difficulty-unknown {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+
+.duration-badge {
+  display: inline-block;
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* 评分显示 */
+.rating-display {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rating-stars-small {
+  display: flex;
+  gap: 2px;
+}
+
+.star-small {
+  color: #d1d5db;
+  font-size: 0.875rem;
+}
+
+.star-small.filled {
+  color: #fbbf24;
+}
+
+.rating-text-small {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .course-actions {
@@ -632,78 +1186,69 @@ onMounted(() => {
   gap: 8px;
 }
 
-.course-content {
-  flex: 1;
+.course-row:hover {
+  background: #f8fafc;
 }
 
-.course-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #111827;
-  margin: 0 0 8px 0;
+/* BR (D.3): Pagination controls */
+.pagination {
+  margin-top: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.course-description {
+.pagination-info {
   color: #6b7280;
   font-size: 0.875rem;
-  line-height: 1.5;
-  margin: 0 0 16px 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  font-weight: 500;
 }
 
-.course-meta {
+.pagination-controls {
   display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
 }
 
-.course-topic {
-  background: #f3f4f6;
+.pagination-btn {
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
   color: #374151;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 40px;
 }
 
-.course-difficulty {
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 500;
+.pagination-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #10b981;
+  color: #10b981;
 }
 
-.difficulty-beginner {
-  background: #dcfce7;
-  color: #166534;
+.pagination-btn.active {
+  background: #10b981;
+  border-color: #10b981;
+  color: white;
 }
 
-.difficulty-intermediate {
-  background: #fef3c7;
-  color: #92400e;
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
-.difficulty-advanced {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.difficulty-unknown {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
-.course-duration {
-  background: #e0e7ff;
-  color: #3730a3;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 500;
+.pagination-ellipsis {
+  padding: 8px 4px;
+  color: #9ca3af;
+  font-size: 0.875rem;
 }
 
 /* 评分信息 */
@@ -975,21 +1520,41 @@ onMounted(() => {
   
   .search-container {
     max-width: none;
-  }
-  
-  .courses-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .course-header {
     flex-direction: column;
-    align-items: flex-start;
+  }
+  
+  .clear-search-btn {
+    width: 100%;
+  }
+  
+  .courses-table {
+    font-size: 0.875rem;
+  }
+  
+  .courses-table th,
+  .courses-table td {
+    padding: 12px 8px;
+  }
+  
+  .column-search-input {
+    font-size: 0.7rem;
+    padding: 4px 24px 4px 6px;
+  }
+  
+  .pagination {
+    flex-direction: column;
     gap: 12px;
   }
   
-  .course-actions {
-    width: 100%;
-    justify-content: flex-end;
+  .pagination-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .pagination-btn {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    min-width: 36px;
   }
   
   .modal-content {

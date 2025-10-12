@@ -123,3 +123,4 @@ const hasRequiredPermission = computed(() => {
   background: #545b62;
 }
 </style>
+

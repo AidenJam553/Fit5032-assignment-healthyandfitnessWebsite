@@ -9,12 +9,13 @@ import rateLimit from 'express-rate-limit'
 import sgMail from '@sendgrid/mail'
 import multer from 'multer'
 import { initializeApp } from 'firebase/app'
-import { getFirestore, collection, getDocs } from 'firebase/firestore'
+import { getFirestore, collection, getDocs, doc, getDoc, deleteDoc, updateDoc, query, where } from 'firebase/firestore'
+import admin from 'firebase-admin'
 
 // Load environment variables
 dotenv.config()
 
-// Initialize Firebase
+// Initialize Firebase Client SDK (for Firestore)
 const firebaseConfig = {
   apiKey: process.env.VITE_FIREBASE_API_KEY,
   authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -26,7 +27,35 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig)
 const db = getFirestore(firebaseApp)
-console.log('Firebase initialized in server')
+console.log('Firebase Client SDK initialized in server')
+
+// Initialize Firebase Admin SDK (for Authentication management)
+let adminAuth = null
+try {
+  // Try to initialize Admin SDK with service account
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      projectId: process.env.VITE_FIREBASE_PROJECT_ID
+    })
+    adminAuth = admin.auth()
+    console.log('✅ Firebase Admin SDK initialized successfully')
+  } else {
+    // Fallback: Initialize without service account (limited functionality)
+    console.warn('⚠️ FIREBASE_SERVICE_ACCOUNT_KEY not found. Admin SDK running with limited functionality.')
+    console.warn('   To delete Firebase Authentication users, please add service account key to .env')
+    // Try default credentials (works in production environments like Cloud Run)
+    admin.initializeApp({
+      projectId: process.env.VITE_FIREBASE_PROJECT_ID
+    })
+    adminAuth = admin.auth()
+    console.log('⚠️ Firebase Admin SDK initialized with default credentials')
+  }
+} catch (err) {
+  console.error('❌ Failed to initialize Firebase Admin SDK:', err.message)
+  console.error('   User deletion from Firebase Authentication will not work.')
+}
 
 const app = express()
 
@@ -613,6 +642,264 @@ app.post('/api/admin/send-email', upload.array('attachments', 5), async (req, re
     res.status(500).json({ 
       ok: false, 
       error: `Failed to send email: ${err.message}` 
+    })
+  }
+})
+
+// Cleanup orphan users (users in Firestore but not in Authentication)
+app.post('/api/admin/cleanup-orphan-users', async (req, res) => {
+  try {
+    console.log('🧹 Starting orphan user cleanup...')
+    
+    if (!adminAuth) {
+      return res.status(500).json({
+        ok: false,
+        error: 'Firebase Admin SDK not initialized'
+      })
+    }
+    
+    // Get all users from Firebase Authentication
+    const listUsersResult = await adminAuth.listUsers()
+    const authUsers = listUsersResult.users
+    const authEmails = new Set(authUsers.map(u => u.email))
+    
+    console.log(`Found ${authUsers.length} users in Authentication`)
+    
+    // Get all users from Firestore
+    const firestoreSnapshot = await getDocs(collection(db, 'users'))
+    
+    console.log(`Found ${firestoreSnapshot.size} users in Firestore`)
+    
+    const deletedUsers = []
+    const keptUsers = []
+    
+    // Check each Firestore user
+    for (const docSnap of firestoreSnapshot.docs) {
+      const docId = docSnap.id
+      const userData = docSnap.data()
+      const email = userData.email
+      
+      if (!email || !authEmails.has(email)) {
+        // User doesn't exist in Authentication - delete from Firestore
+        console.log(`🗑️  Deleting orphan user: ${email || docId}`)
+        
+        try {
+          await deleteDoc(doc(db, 'users', docId))
+          deletedUsers.push({ docId, email: email || 'N/A' })
+          console.log(`   ✅ Deleted`)
+        } catch (err) {
+          console.error(`   ❌ Failed to delete: ${err.message}`)
+        }
+      } else {
+        // User exists in Authentication - keep
+        const authUser = authUsers.find(u => u.email === email)
+        keptUsers.push({ email, authUid: authUser.uid })
+        console.log(`✓ Keeping ${email}`)
+      }
+    }
+    
+    console.log(`\n✅ Cleanup complete: deleted ${deletedUsers.length}, kept ${keptUsers.length}`)
+    
+    res.json({
+      ok: true,
+      message: `Cleaned up ${deletedUsers.length} orphan users`,
+      details: {
+        authUsers: authUsers.length,
+        firestoreUsers: firestoreSnapshot.size,
+        deleted: deletedUsers.length,
+        kept: keptUsers.length,
+        deletedUsers,
+        keptUsers
+      }
+    })
+  } catch (err) {
+    console.error('❌ Cleanup error:', err)
+    res.status(500).json({
+      ok: false,
+      error: err.message
+    })
+  }
+})
+
+// Sync Authentication UIDs to Firestore
+app.post('/api/admin/sync-auth-uids', async (req, res) => {
+  try {
+    console.log('🔄 Starting UID synchronization...')
+    
+    if (!adminAuth) {
+      return res.status(500).json({
+        ok: false,
+        error: 'Firebase Admin SDK not initialized'
+      })
+    }
+    
+    // Get all users from Firebase Authentication
+    const listUsersResult = await adminAuth.listUsers()
+    const authUsers = listUsersResult.users
+    
+    console.log(`Found ${authUsers.length} users in Authentication`)
+    
+    // Get all users from Firestore
+    const firestoreSnapshot = await getDocs(collection(db, 'users'))
+    const firestoreUsers = {}
+    firestoreSnapshot.forEach(doc => {
+      const data = doc.data()
+      firestoreUsers[data.email] = { docId: doc.id, data }
+    })
+    
+    console.log(`Found ${firestoreSnapshot.size} users in Firestore`)
+    
+    const updates = []
+    const errors = []
+    
+    // Match and update
+    for (const authUser of authUsers) {
+      const email = authUser.email
+      const authUid = authUser.uid
+      
+      if (firestoreUsers[email]) {
+        const fsUser = firestoreUsers[email]
+        const needsUpdate = fsUser.data.id !== authUid || fsUser.data.uid !== authUid
+        
+        if (needsUpdate) {
+          try {
+            await updateDoc(doc(db, 'users', fsUser.docId), {
+              id: authUid,
+              uid: authUid
+            })
+            console.log(`✅ Updated ${email}: id & uid = ${authUid}`)
+            updates.push({ email, authUid, docId: fsUser.docId })
+          } catch (err) {
+            console.error(`❌ Failed to update ${email}:`, err.message)
+            errors.push({ email, error: err.message })
+          }
+        } else {
+          console.log(`✓ ${email} already correct`)
+        }
+      } else {
+        console.warn(`⚠️ ${email} exists in Auth but not in Firestore`)
+        errors.push({ email, error: 'Not found in Firestore' })
+      }
+    }
+    
+    res.json({
+      ok: true,
+      message: `Synchronized ${updates.length} users`,
+      details: {
+        authUsers: authUsers.length,
+        firestoreUsers: firestoreSnapshot.size,
+        updated: updates.length,
+        errors: errors.length,
+        updates,
+        errors
+      }
+    })
+  } catch (err) {
+    console.error('❌ Sync error:', err)
+    res.status(500).json({
+      ok: false,
+      error: err.message
+    })
+  }
+})
+
+// Delete user endpoint - deletes from both Firebase Authentication and Firestore
+app.delete('/api/admin/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params
+    
+    if (!userId) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'Missing user ID' 
+      })
+    }
+    
+    console.log('🗑️ Deleting user:', userId)
+    
+    let authDeleted = false
+    let firestoreDeleted = false
+    const warnings = []
+    
+    // Step 1: Delete from Firebase Authentication
+    if (adminAuth) {
+      try {
+        await adminAuth.deleteUser(userId)
+        authDeleted = true
+        console.log('✅ User deleted from Firebase Authentication:', userId)
+      } catch (authError) {
+        if (authError.code === 'auth/user-not-found') {
+          warnings.push('User not found in Firebase Authentication')
+          console.warn('⚠️ User not in Authentication:', userId)
+        } else {
+          console.error('❌ Failed to delete from Authentication:', authError.message)
+          warnings.push(`Authentication deletion failed: ${authError.message}`)
+        }
+      }
+    } else {
+      warnings.push('Firebase Admin SDK not initialized - cannot delete from Authentication')
+      console.warn('⚠️ Cannot delete from Authentication - Admin SDK not initialized')
+    }
+    
+    // Step 2: Delete from Firestore
+    try {
+      // Try to delete by document ID first
+      const docRef = doc(db, 'users', userId)
+      const docSnap = await getDoc(docRef)
+      
+      if (docSnap.exists()) {
+        await deleteDoc(docRef)
+        firestoreDeleted = true
+        console.log('✅ User deleted from Firestore (by doc ID):', userId)
+      } else {
+        // Try to find by UID field
+        console.log('🔍 Document not found by ID, searching by UID field...')
+        const usersRef = collection(db, 'users')
+        const q = query(usersRef, where('uid', '==', userId))
+        const querySnapshot = await getDocs(q)
+        
+        if (!querySnapshot.empty) {
+          const userDoc = querySnapshot.docs[0]
+          await deleteDoc(userDoc.ref)
+          firestoreDeleted = true
+          console.log('✅ User deleted from Firestore (by UID lookup):', userId)
+        } else {
+          warnings.push('User document not found in Firestore')
+          console.warn('⚠️ User not found in Firestore:', userId)
+        }
+      }
+    } catch (firestoreError) {
+      console.error('❌ Failed to delete from Firestore:', firestoreError.message)
+      warnings.push(`Firestore deletion failed: ${firestoreError.message}`)
+    }
+    
+    // Determine response
+    if (authDeleted || firestoreDeleted) {
+      const message = []
+      if (authDeleted) message.push('Firebase Authentication')
+      if (firestoreDeleted) message.push('Firestore database')
+      
+      return res.json({ 
+        ok: true, 
+        message: `User deleted from: ${message.join(' and ')}`,
+        details: {
+          authDeleted,
+          firestoreDeleted,
+          warnings: warnings.length > 0 ? warnings : undefined
+        }
+      })
+    } else {
+      return res.status(404).json({ 
+        ok: false, 
+        error: 'User not found in either Firebase Authentication or Firestore',
+        warnings
+      })
+    }
+  } catch (err) {
+    console.error('❌ Delete user error:', err)
+    res.status(500).json({ 
+      ok: false, 
+      error: `Failed to delete user: ${err.message}` 
     })
   }
 })

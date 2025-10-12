@@ -3,6 +3,7 @@ import {
   collection, 
   doc, 
   addDoc, 
+  setDoc,
   updateDoc, 
   deleteDoc, 
   getDoc, 
@@ -21,13 +22,24 @@ export const userService = {
   // Create a new user
   async createUser(userData) {
     try {
-      const docRef = await addDoc(collection(db, 'users'), {
+      // Use the user's UID as the document ID to ensure consistency with Authentication
+      const userId = userData.uid || userData.id
+      if (!userId) {
+        throw new Error('User ID (uid) is required to create user document')
+      }
+      
+      const userDocData = {
         ...userData,
+        uid: userId, // Ensure uid field matches document ID
+        id: userId,  // Keep id field for backwards compatibility
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
-      })
-      console.log('User created in Firestore with ID:', docRef.id)
-      return { ok: true, user: { id: docRef.id, ...userData } }
+      }
+      
+      // Use setDoc with the UID as document ID instead of addDoc
+      await setDoc(doc(db, 'users', userId), userDocData)
+      console.log('User created in Firestore with ID:', userId)
+      return { ok: true, user: { ...userDocData, id: userId } }
     } catch (error) {
       console.error('Error creating user:', error)
       return { ok: false, error: error.message }
@@ -113,24 +125,44 @@ export const userService = {
     }
   },
 
-  // Delete user (only deletes Firestore document, not Firebase Auth user)
-  // Note: userId should be the Firestore document ID, not the Firebase Auth UID
+  // Delete user (deletes Firestore document)
+  // Note: This only deletes the Firestore document, not the Firebase Auth user
+  // Firebase Auth users can only be deleted via Admin SDK (server-side)
   async deleteUser(userId) {
     try {
       console.log('Attempting to delete user with ID:', userId)
       
-      // 直接使用文档 ID 删除
+      // Try to delete using the provided userId as Firestore document ID
       const docRef = doc(db, 'users', userId)
       const docSnap = await getDoc(docRef)
       
       if (!docSnap.exists()) {
-        console.error('User document not found:', userId)
-        return { ok: false, error: 'User not found' }
+        console.warn('User document not found in Firestore:', userId)
+        
+        // Try to find user by UID field (in case the document ID is different)
+        const q = query(collection(db, 'users'), where('uid', '==', userId))
+        const querySnapshot = await getDocs(q)
+        
+        if (!querySnapshot.empty) {
+          // Found user by UID field, delete that document
+          const userDoc = querySnapshot.docs[0]
+          await deleteDoc(userDoc.ref)
+          console.log('User deleted from Firestore by UID lookup:', userId)
+          return { ok: true, message: 'User deleted successfully (found by UID)' }
+        }
+        
+        // User not found in Firestore at all
+        console.error('User not found in Firestore by ID or UID:', userId)
+        return { 
+          ok: false, 
+          error: 'User not found in database. The user may only exist in Firebase Authentication and not in the Firestore users collection.' 
+        }
       }
       
+      // Delete the document
       await deleteDoc(docRef)
       console.log('User deleted from Firestore successfully:', userId)
-      return { ok: true }
+      return { ok: true, message: 'User deleted successfully' }
     } catch (error) {
       console.error('Error deleting user:', error)
       return { ok: false, error: error.message }
