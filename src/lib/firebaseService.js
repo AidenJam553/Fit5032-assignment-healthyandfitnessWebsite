@@ -565,10 +565,10 @@ export const courseService = {
     try {
       const docRef = doc(db, 'courses', courseId)
       await deleteDoc(docRef)
-      return true
+      return { ok: true, message: 'Course deleted successfully' }
     } catch (error) {
       console.error('Error deleting course:', error)
-      throw error
+      return { ok: false, error: error.message }
     }
   },
 

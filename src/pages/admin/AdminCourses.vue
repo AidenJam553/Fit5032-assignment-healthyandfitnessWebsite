@@ -95,6 +95,20 @@ const sortedCourses = computed(() => {
       bVal = b.averageRating || 0
     }
     
+    // 特殊处理难度等级 - 按实际难度排序
+    if (sortColumn.value === 'difficulty') {
+      const difficultyOrder = {
+        'beginner': 1,
+        'intermediate': 2,
+        'advanced': 3
+      }
+      aVal = difficultyOrder[String(aVal).toLowerCase()] || 0
+      bVal = difficultyOrder[String(bVal).toLowerCase()] || 0
+      
+      // 难度等级按数字排序
+      return sortOrder.value === 'asc' ? aVal - bVal : bVal - aVal
+    }
+    
     // 处理 undefined/null 值
     if (aVal === undefined || aVal === null) aVal = ''
     if (bVal === undefined || bVal === null) bVal = ''
@@ -181,23 +195,48 @@ async function loadCourseRatings(courseId) {
   }
 }
 
-// 删除课程
+// 删除课程（同时删除所有评分）
 async function deleteCourse(course) {
-  if (!confirm(`Are you sure you want to delete course "${course.title}"?`)) {
+  const confirmMessage = `Are you sure you want to delete course "${course.title}"?\n\nThis will also delete all ${course.ratingCount || 0} ratings for this course.\n\nThis action CANNOT be undone!`
+  
+  if (!confirm(confirmMessage)) {
     return
   }
   
+  loading.value = true
+  
   try {
+    console.log(`Deleting course: ${course.title} (ID: ${course.id})`)
+    
+    // 步骤 1: 删除所有该课程的评分
+    let ratingsDeleted = 0
+    try {
+      const ratings = await courseRatingService.getCourseRatings(course.id)
+      console.log(`Found ${ratings.length} ratings to delete`)
+      
+      for (const rating of ratings) {
+        await courseRatingService.deleteRating(rating.id)
+        ratingsDeleted++
+      }
+      console.log(`✅ Deleted ${ratingsDeleted} ratings`)
+    } catch (err) {
+      console.warn('Error deleting ratings:', err.message)
+    }
+    
+    // 步骤 2: 删除课程
     const result = await courseService.deleteCourse(course.id)
+    
     if (result.ok) {
       courses.value = courses.value.filter(c => c.id !== course.id)
-      showSuccessMessage(`Course "${course.title}" deleted successfully`)
+      showSuccessMessage(`✅ Course "${course.title}" deleted successfully\n\nAlso deleted ${ratingsDeleted} ratings`)
     } else {
       showErrorMessage(`Failed to delete course: ${result.error}`)
     }
   } catch (err) {
     console.error('Error deleting course:', err)
-    showErrorMessage('Failed to delete course')
+    showErrorMessage(`Failed to delete course: ${err.message}`)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -305,25 +344,52 @@ function toggleSelectAll() {
   }
 }
 
-// 批量删除课程
+// 批量删除课程（同时删除所有评分）
 async function deleteSelectedCourses() {
   if (selectedCourses.value.length === 0) return
   
-  if (!confirm(`Are you sure you want to delete ${selectedCourses.value.length} selected courses?`)) {
+  // 计算总评分数
+  const totalRatings = selectedCourses.value.reduce((sum, courseId) => {
+    const course = courses.value.find(c => c.id === courseId)
+    return sum + (course?.ratingCount || 0)
+  }, 0)
+  
+  const confirmMessage = `Are you sure you want to delete ${selectedCourses.value.length} selected courses?\n\nThis will also delete approximately ${totalRatings} ratings.\n\nThis action CANNOT be undone!`
+  
+  if (!confirm(confirmMessage)) {
     return
   }
   
+  loading.value = true
+  let totalRatingsDeleted = 0
+  
   try {
     for (const courseId of selectedCourses.value) {
+      // 删除该课程的所有评分
+      try {
+        const ratings = await courseRatingService.getCourseRatings(courseId)
+        for (const rating of ratings) {
+          await courseRatingService.deleteRating(rating.id)
+          totalRatingsDeleted++
+        }
+      } catch (err) {
+        console.warn(`Error deleting ratings for course ${courseId}:`, err.message)
+      }
+      
+      // 删除课程
       await courseService.deleteCourse(courseId)
     }
     
+    const deletedCount = selectedCourses.value.length
     courses.value = courses.value.filter(course => !selectedCourses.value.includes(course.id))
     selectedCourses.value = []
-    showSuccessMessage(`${selectedCourses.value.length} courses deleted successfully`)
+    
+    showSuccessMessage(`✅ ${deletedCount} courses deleted successfully\n\nAlso deleted ${totalRatingsDeleted} ratings`)
   } catch (err) {
     console.error('Error deleting selected courses:', err)
     showErrorMessage('Failed to delete selected courses')
+  } finally {
+    loading.value = false
   }
 }
 
