@@ -130,7 +130,7 @@ onBeforeUnmount(() => {
           <div class="explore__grid">
             <div class="map-card">
               <div class="map-card__icon">🗺️</div>
-              <Button variant="secondary" size="medium">Find a gym &gt;</Button>
+              <Button variant="secondary" size="medium" tag="router-link" to="/explore">Find a gym &gt;</Button>
             </div>
             <ul class="list-placeholder">
               <li></li>

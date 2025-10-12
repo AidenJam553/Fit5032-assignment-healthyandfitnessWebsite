@@ -117,7 +117,12 @@ GOOGLE_CLIENT_ID=your_google_client_id_here
 
 # API Configuration
 VITE_API_URL=http://localhost:5175/api
+
+# Google Maps Configuration
+VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
 ```
+
+📖 **See [GOOGLE_MAPS_SETUP.md](./GOOGLE_MAPS_SETUP.md) for detailed Google Maps API setup guide**
 
 ## Firebase Setup
 
@@ -151,6 +156,43 @@ The app uses the following Firestore collections:
 - `records` - User health and fitness records
 - `wishlist` - User course wishlists
 
+## Features
+
+### Map Integration (BR E.2 - Geo Location)
+
+The application includes an advanced **Explore Gyms** feature with interactive maps:
+
+#### Two Non-Trivial Features:
+
+1. **Interactive Map Display with POI Information**
+   - Real-time display of user location and nearby gyms
+   - Interactive markers with detailed information popups
+   - Automatic distance calculation from user to each gym
+   - Click markers to view gym details (name, rating, distance)
+   - Animated marker interactions and smooth map controls
+
+2. **Route Navigation and Trip Planning**
+   - Turn-by-turn directions from current location to selected gym
+   - Visual route display with colored polyline
+   - Comprehensive trip information:
+     - Total distance (km)
+     - Estimated travel time
+     - Number of route steps
+   - "Open in Google Maps" for native app integration
+   - Automatic route optimization and map fitting
+
+#### Additional Features:
+- Dual view modes: Interactive map and sortable list view
+- Real-time location detection with accuracy indicator
+- Search and filter gyms by name
+- Distance-based sorting in list view
+- Responsive design for all device sizes
+- Smooth animations and transitions
+
+**Access**: Navigate to `/explore` or click "Find a gym" on the homepage
+
+📖 **See [GOOGLE_MAPS_SETUP.md](./GOOGLE_MAPS_SETUP.md) for setup instructions**
+
 ## Security Features
 
 - **Secure Password Hashing**: Uses bcrypt with salt rounds for password storage
@@ -158,6 +200,7 @@ The app uses the following Firestore collections:
 - **No Hardcoded Passwords**: Admin credentials are configurable via environment variables
 - **Password Policy**: Enforces strong passwords (6+ chars, upper, lower, number)
 - **Input Validation**: Server-side validation for all authentication requests
+- **API Key Protection**: Environment variables for sensitive API keys
 
 ## Test accounts (for demo)
 

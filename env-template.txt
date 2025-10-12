@@ -45,5 +45,9 @@ SENDGRID_FROM_EMAIL=your_verified_sender_email@example.com
 ADMIN_EMAIL=admin@admin.com
 ADMIN_PASSWORD=Admin123
 
+# Google Maps Configuration
+# Get your API key from https://console.cloud.google.com/google/maps-apis
+# Enable the following APIs: Maps JavaScript API, Places API, Directions API, Geocoding API
+VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
 
 
