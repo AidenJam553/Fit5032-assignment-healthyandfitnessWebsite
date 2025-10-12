@@ -293,9 +293,34 @@ async function deleteSelectedUsers() {
 }
 
 // 格式化日期
-function formatDate(dateString) {
-  if (!dateString) return 'N/A'
-  return new Date(dateString).toLocaleDateString('en-US', {
+function formatDate(dateInput) {
+  if (!dateInput) return 'N/A'
+  
+  let date
+  
+  // 处理 Firestore Timestamp 对象
+  if (dateInput && typeof dateInput === 'object' && dateInput.seconds) {
+    date = new Date(dateInput.seconds * 1000)
+  }
+  // 处理字符串格式
+  else if (typeof dateInput === 'string') {
+    date = new Date(dateInput)
+  }
+  // 处理 Date 对象
+  else if (dateInput instanceof Date) {
+    date = dateInput
+  }
+  // 其他情况，尝试直接转换
+  else {
+    date = new Date(dateInput)
+  }
+  
+  // 检查日期是否有效
+  if (isNaN(date.getTime())) {
+    return 'Invalid Date'
+  }
+  
+  return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

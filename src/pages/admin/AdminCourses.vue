@@ -428,6 +428,12 @@ function handleLogout() {
   router.push('/')
 }
 
+
+// 跳转到分析页面
+function goToAnalytics() {
+  router.push('/admin/courses/analytics')
+}
+
 // 页面加载时获取课程数据
 onMounted(() => {
   loadCourses()
@@ -503,6 +509,13 @@ onMounted(() => {
           </button>
         </div>
         <div class="toolbar-actions">
+          <Button 
+            variant="primary" 
+            size="medium" 
+            @click="goToAnalytics"
+          >
+            📊 View Analytics
+          </Button>
           <Button 
             v-if="selectedCourses.length > 0"
             variant="danger" 
@@ -783,6 +796,7 @@ onMounted(() => {
           </button>
         </div>
       </div>
+
 
       <!-- 评分详情模态框 -->
       <div v-if="showRatingModal" class="modal-overlay" @click="showRatingModal = false">
@@ -1628,6 +1642,7 @@ onMounted(() => {
     max-height: calc(100vh - 40px);
   }
 }
+
 </style>
 
 

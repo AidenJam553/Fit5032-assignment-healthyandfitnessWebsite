@@ -744,6 +744,30 @@ export const courseRatingService = {
       console.error('Error deleting user rating:', error)
       return { ok: false, error: error.message }
     }
+  },
+
+  // Get all ratings (for analytics)
+  async getAllRatings() {
+    try {
+      const q = query(
+        collection(db, 'course_ratings'),
+        orderBy('createdAt', 'desc')
+      )
+      const querySnapshot = await getDocs(q)
+      
+      const ratings = []
+      querySnapshot.forEach(doc => {
+        ratings.push({
+          id: doc.id,
+          ...doc.data()
+        })
+      })
+      
+      return ratings
+    } catch (error) {
+      console.error('Error getting all ratings:', error)
+      throw error
+    }
   }
 }
 

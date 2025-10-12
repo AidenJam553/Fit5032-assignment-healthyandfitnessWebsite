@@ -20,6 +20,7 @@ import AuthRegister from './pages/AuthRegister.vue'
 // Lazy admin child pages (simple placeholders)
 const AdminUsers = () => import('./pages/admin/AdminUsers.vue')
 const AdminCourses = () => import('./pages/admin/AdminCourses.vue')
+const AdminCourseAnalytics = () => import('./pages/admin/AdminCourseAnalytics.vue')
 const AdminPosts = () => import('./pages/admin/AdminPosts.vue')
 const AdminBookings = () => import('./pages/admin/AdminBookings.vue')
 const AdminEmail = () => import('./pages/admin/AdminEmail.vue')
@@ -51,6 +52,7 @@ const routes = [
   { path: '/admin', name: 'admin-home', component: AdminHome, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/users', component: AdminUsers, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/courses', component: AdminCourses, meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/admin/courses/analytics', component: AdminCourseAnalytics, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/posts', component: AdminPosts, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/bookings', component: AdminBookings, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/email-centre', component: AdminEmail, meta: { requiresAuth: true, requiresAdmin: true } },
