@@ -30,10 +30,16 @@ VITE_FIREBASE_APP_ID=1:932482057735:web:a6213d43e47a7bbf278ca2
 # API Configuration
 VITE_API_URL=http://localhost:5175/api
 
-# SendGrid Email Configuration
+# SendGrid Email Configuration (For Express Server - Legacy)
 # Get your API key from https://app.sendgrid.com/settings/api_keys
+# Note: If using Cloud Functions, configure via Firebase CLI instead
 SENDGRID_API_KEY=your_sendgrid_api_key_here
 SENDGRID_FROM_EMAIL=your_verified_sender_email@example.com
+
+# Firebase Cloud Functions Configuration
+# Run these commands to set up SendGrid for Cloud Functions:
+# firebase functions:config:set sendgrid.key="YOUR_SENDGRID_API_KEY"
+# firebase functions:config:set sendgrid.from="noreply@yourdomain.com"
 
 # Admin Account Configuration (Optional)
 ADMIN_EMAIL=admin@admin.com

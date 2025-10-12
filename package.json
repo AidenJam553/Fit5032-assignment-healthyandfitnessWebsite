@@ -13,7 +13,11 @@
     "server": "node server/index.js",
     "dev:full": "concurrently -k \"npm:server\" \"npm:dev\"",
     "lint": "eslint . --fix",
-    "format": "prettier --write src/"
+    "format": "prettier --write src/",
+    "functions:install": "cd functions && npm install",
+    "functions:serve": "firebase emulators:start --only functions",
+    "functions:deploy": "firebase deploy --only functions",
+    "functions:logs": "firebase functions:log"
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.6",

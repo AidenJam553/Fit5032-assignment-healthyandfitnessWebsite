@@ -3,9 +3,12 @@ import { ref, onMounted } from 'vue'
 import { logout } from '@/lib/auth'
 import { useRouter } from 'vue-router'
 import Button from '@/components/Button.vue'
+import { getFunctions, httpsCallable } from 'firebase/functions'
+import app from '@/lib/firebase'
 
 const router = useRouter()
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5175/api'
+const functions = getFunctions(app)
 
 // Form state
 const recipients = ref('')
@@ -104,7 +107,21 @@ function showMessage(msg, type) {
   }, 5000)
 }
 
-// Send email
+// Convert file to base64
+async function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => {
+      // Remove data URL prefix (e.g., "data:image/png;base64,")
+      const base64 = reader.result.split(',')[1]
+      resolve(base64)
+    }
+    reader.onerror = error => reject(error)
+  })
+}
+
+// Send email using Cloud Function
 async function sendEmail() {
   if (!recipients.value.trim() || !subject.value.trim() || !emailContent.value.trim()) {
     showMessage('Please fill in all required fields', 'error')
@@ -114,30 +131,36 @@ async function sendEmail() {
   sending.value = true
   
   try {
-    const formData = new FormData()
-    formData.append('to', recipients.value)
-    formData.append('subject', subject.value)
-    
-    if (useHtml.value) {
-      formData.append('html', emailContent.value)
-    } else {
-      formData.append('text', emailContent.value)
+    // Prepare email data
+    const emailData = {
+      to: recipients.value,
+      subject: subject.value,
     }
     
-    // Add attachments
-    attachments.value.forEach(file => {
-      formData.append('attachments', file)
-    })
+    // Add content (text or html)
+    if (useHtml.value) {
+      emailData.html = emailContent.value
+    } else {
+      emailData.text = emailContent.value
+    }
     
-    const response = await fetch(`${API_URL}/admin/send-email`, {
-      method: 'POST',
-      body: formData,
-    })
+    // Process attachments if any
+    if (attachments.value.length > 0) {
+      emailData.attachments = await Promise.all(
+        attachments.value.map(async (file) => ({
+          content: await fileToBase64(file),
+          filename: file.name,
+          type: file.type
+        }))
+      )
+    }
     
-    const data = await response.json()
+    // Call Cloud Function
+    const sendEmailFunction = httpsCallable(functions, 'sendEmail')
+    const result = await sendEmailFunction(emailData)
     
-    if (data.ok) {
-      showMessage(data.message || 'Email sent successfully!', 'success')
+    if (result.data.success) {
+      showMessage(result.data.message || 'Email sent successfully!', 'success')
       // Reset form
       recipients.value = ''
       subject.value = ''
@@ -148,10 +171,21 @@ async function sendEmail() {
         fileInput.value.value = ''
       }
     } else {
-      showMessage(data.error || 'Failed to send email', 'error')
+      showMessage('Failed to send email', 'error')
     }
   } catch (err) {
-    showMessage('Error sending email: ' + err.message, 'error')
+    console.error('Send email error:', err)
+    
+    // Handle Cloud Functions errors
+    if (err.code === 'unauthenticated') {
+      showMessage('You must be logged in to send emails', 'error')
+    } else if (err.code === 'permission-denied') {
+      showMessage('Only administrators can send emails', 'error')
+    } else if (err.code === 'failed-precondition') {
+      showMessage('Email service is not configured. Please contact the administrator.', 'error')
+    } else {
+      showMessage('Error sending email: ' + (err.message || 'Unknown error'), 'error')
+    }
   } finally {
     sending.value = false
   }

@@ -32,6 +32,38 @@ npm run server
 
 Vite will print the local URL (e.g. `http://localhost:5174`). The API runs at `http://localhost:5175` and is proxied under `/api`.
 
+## Firebase Cloud Functions Setup
+
+This project uses Firebase Cloud Functions for serverless backend functionality, including email sending.
+
+### Quick Setup
+
+1. **Install Firebase CLI**:
+   ```powershell
+   npm install -g firebase-tools
+   firebase login
+   ```
+
+2. **Install Functions Dependencies**:
+   ```powershell
+   cd functions
+   npm install
+   cd ..
+   ```
+
+3. **Configure SendGrid for Email**:
+   ```powershell
+   firebase functions:config:set sendgrid.key="YOUR_SENDGRID_API_KEY"
+   firebase functions:config:set sendgrid.from="noreply@yourdomain.com"
+   ```
+
+4. **Deploy Functions**:
+   ```powershell
+   firebase deploy --only functions
+   ```
+
+📖 **See [QUICKSTART_CLOUD_FUNCTIONS.md](./QUICKSTART_CLOUD_FUNCTIONS.md) for detailed setup guide**
+
 ## Google OAuth setup
 
 ### Step-by-step instructions:
