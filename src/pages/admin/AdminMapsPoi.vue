@@ -1,30 +1,14 @@
 <script setup>
-import { logout } from '@/lib/auth'
 import { useRouter } from 'vue-router'
+import AdminHeader from '@/components/AdminHeader.vue'
 import Button from '@/components/Button.vue'
 
 const router = useRouter()
-
-function handleLogout() {
-  logout()
-  router.push('/')
-}
 </script>
 
 <template>
   <div class="admin">
-    <header class="admin__bar">
-      <div class="container admin__bar-inner">
-        <router-link to="/admin" class="logo">ADMIN MANAGE SYSTEM</router-link>
-        <div class="admin__actions">
-          <Button variant="secondary" size="medium" @click="handleLogout">Log out</Button>
-          <div class="chip">
-            <span class="chip__avatar">A</span>
-            <span>Admin</span>
-          </div>
-        </div>
-      </div>
-    </header>
+    <AdminHeader />
 
     <main class="container admin__content">
       <h1 class="page-title">Maps / POI</h1>

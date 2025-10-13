@@ -15,6 +15,10 @@ const activeDifficulty = ref('')
 const activeTopic = ref('')
 const searchQuery = ref('')
 
+// Pagination state
+const currentPage = ref(1)
+const coursesPerPage = 10
+
 // Debug watcher for lessons data
 watch(() => lessons.lessons, (newValue, oldValue) => {
   console.log('Lessons data changed:', {
@@ -50,7 +54,7 @@ onUnmounted(() => {
   lessons.stopRealtimeListeners()
 })
 
-// Filtered courses
+// Filtered courses (all matching filters)
 const filteredLessons = computed(() => {
   // Get courses directly from store to avoid getter issues
   const allCourses = lessons.courses || []
@@ -77,6 +81,44 @@ const filteredLessons = computed(() => {
   }
 
   return filtered
+})
+
+// Total number of pages
+const totalPages = computed(() => {
+  return Math.ceil(filteredLessons.value.length / coursesPerPage)
+})
+
+// Paginated courses for current page
+const paginatedLessons = computed(() => {
+  const start = (currentPage.value - 1) * coursesPerPage
+  const end = start + coursesPerPage
+  return filteredLessons.value.slice(start, end)
+})
+
+// Pagination methods
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+    // Scroll to top of courses
+    window.scrollTo({ top: 500, behavior: 'smooth' })
+  }
+}
+
+const previousPage = () => {
+  if (currentPage.value > 1) {
+    goToPage(currentPage.value - 1)
+  }
+}
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    goToPage(currentPage.value + 1)
+  }
+}
+
+// Reset to first page when filters change
+watch([activeDifficulty, activeTopic, searchQuery], () => {
+  currentPage.value = 1
 })
 
 // Filter options
@@ -429,7 +471,7 @@ const getCourseDescription = (title) => {
           <!-- Courses Grid -->
           <div v-if="filteredLessons.length > 0" class="courses-grid">
             <Card 
-              v-for="(course, index) in filteredLessons" 
+              v-for="(course, index) in paginatedLessons" 
               :key="course.id"
               variant="post" 
               size="large" 
@@ -465,8 +507,45 @@ const getCourseDescription = (title) => {
           </Card>
         </div>
 
+          <!-- Pagination -->
+          <div v-if="filteredLessons.length > 0 && totalPages > 1" class="pagination">
+            <button 
+              class="pagination-btn pagination-prev" 
+              :disabled="currentPage === 1"
+              @click="previousPage"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6"/>
+              </svg>
+              Previous
+            </button>
+
+            <div class="pagination-pages">
+              <button 
+                v-for="page in totalPages" 
+                :key="page"
+                class="pagination-page" 
+                :class="{ active: currentPage === page }"
+                @click="goToPage(page)"
+              >
+                {{ page }}
+              </button>
+            </div>
+
+            <button 
+              class="pagination-btn pagination-next" 
+              :disabled="currentPage === totalPages"
+              @click="nextPage"
+            >
+              Next
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 18l6-6-6-6"/>
+              </svg>
+            </button>
+          </div>
+
           <!-- Empty State -->
-          <div v-else class="empty-state animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.2s">
+          <div v-else-if="filteredLessons.length === 0" class="empty-state animate-fade-up" :class="{ 'animate-in': isLoaded }" style="animation-delay: 1.2s">
             <div class="empty-icon">📚</div>
             <h3 class="empty-title">No courses found</h3>
             <p class="empty-message">Try adjusting your filters to discover more courses.</p>
@@ -1220,6 +1299,93 @@ const getCourseDescription = (title) => {
   line-height: 1.6;
 }
 
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid var(--border-color);
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: white;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--bg-light);
+}
+
+.pagination-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.pagination-pages {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.pagination-page {
+  min-width: 44px;
+  height: 44px;
+  padding: 8px 12px;
+  background: white;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+}
+
+.pagination-page:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.pagination-page.active {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-md);
+}
+
+.pagination-page.active:hover {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
 /* Animation Styles */
 @keyframes fadeUp {
   from {
@@ -1451,6 +1617,30 @@ const getCourseDescription = (title) => {
   .feed-subtitle {
     font-size: 0.875rem;
   }
+
+  /* Pagination responsive */
+  .pagination {
+    gap: 12px;
+    margin-top: 32px;
+    padding-top: 24px;
+  }
+
+  .pagination-btn {
+    padding: 10px 16px;
+    font-size: 0.8rem;
+  }
+
+  .pagination-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .pagination-page {
+    min-width: 40px;
+    height: 40px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1567,6 +1757,33 @@ const getCourseDescription = (title) => {
   .feed-subtitle {
     font-size: 0.8rem;
     line-height: 1.4;
+  }
+
+  /* Pagination for very small screens */
+  .pagination {
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 24px;
+    padding-top: 20px;
+  }
+
+  .pagination-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 20px;
+    font-size: 0.875rem;
+  }
+
+  .pagination-pages {
+    gap: 6px;
+    width: 100%;
+  }
+
+  .pagination-page {
+    min-width: 36px;
+    height: 36px;
+    padding: 4px 8px;
+    font-size: 0.75rem;
   }
 }
 </style>

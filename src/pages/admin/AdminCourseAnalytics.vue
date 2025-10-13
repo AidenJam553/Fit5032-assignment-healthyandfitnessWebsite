@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed, nextTick } from 'vue'
-import { logout } from '@/lib/auth'
 import { useRouter } from 'vue-router'
+import AdminHeader from '@/components/AdminHeader.vue'
 import Button from '@/components/Button.vue'
 import { courseService, courseRatingService } from '@/lib/firebaseService'
 import {
@@ -556,12 +556,6 @@ function goBack() {
   router.push('/admin/courses')
 }
 
-// 登出
-function handleLogout() {
-  logout()
-  router.push('/')
-}
-
 // 页面加载时获取数据
 onMounted(() => {
   loadData()
@@ -570,22 +564,20 @@ onMounted(() => {
 
 <template>
   <div class="admin">
-    <header class="admin__bar">
-      <div class="container admin__bar-inner">
-        <router-link to="/admin" class="logo">ADMIN MANAGE SYSTEM</router-link>
-        <div class="admin__actions">
-          <Button variant="secondary" size="small" @click="goBack">
-            ← Back to Courses
-          </Button>
+    <AdminHeader />
+    
+    <div class="admin__toolbar">
+      <div class="container toolbar-inner">
+        <Button variant="secondary" size="small" @click="goBack">
+          ← Back to Courses
+        </Button>
+        <div class="toolbar-actions">
           <Button variant="primary" size="small" @click="showExportOptions">
             📥 Export Data
           </Button>
-          <Button variant="danger" size="small" @click="handleLogout">
-            Logout
-          </Button>
         </div>
       </div>
-    </header>
+    </div>
 
     <main class="admin__main">
       <div class="container">
@@ -822,6 +814,24 @@ onMounted(() => {
 }
 
 .admin__actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.admin__toolbar {
+  background: white;
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 0;
+}
+
+.toolbar-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toolbar-actions {
   display: flex;
   gap: 0.75rem;
   align-items: center;

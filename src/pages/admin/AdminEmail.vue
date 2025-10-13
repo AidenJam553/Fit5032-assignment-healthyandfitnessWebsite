@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { logout } from '@/lib/auth'
 import { useRouter } from 'vue-router'
+import AdminHeader from '@/components/AdminHeader.vue'
 import Button from '@/components/Button.vue'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import app from '@/lib/firebase'
@@ -191,11 +191,6 @@ async function sendEmail() {
   }
 }
 
-function handleLogout() {
-  logout()
-  router.push('/')
-}
-
 onMounted(() => {
   loadUsers()
 })
@@ -203,18 +198,7 @@ onMounted(() => {
 
 <template>
   <div class="admin">
-    <header class="admin__bar">
-      <div class="container admin__bar-inner">
-        <router-link to="/admin" class="logo">ADMIN MANAGE SYSTEM</router-link>
-        <div class="admin__actions">
-          <Button variant="secondary" size="medium" @click="handleLogout">Log out</Button>
-          <div class="chip">
-            <span class="chip__avatar">A</span>
-            <span>Admin</span>
-          </div>
-        </div>
-      </div>
-    </header>
+    <AdminHeader />
 
     <main class="container admin__content">
       <h1 class="page-title">Email Centre</h1>

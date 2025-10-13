@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { logout } from '@/lib/auth'
 import { useRouter } from 'vue-router'
+import AdminHeader from '@/components/AdminHeader.vue'
 import Button from '@/components/Button.vue'
 import { courseService, courseRatingService } from '@/lib/firebaseService'
 
@@ -9,6 +9,7 @@ const router = useRouter()
 
 // 课程管理状态
 const courses = ref([])
+const allRatings = ref([]) // 存储所有评分数据
 const loading = ref(false)
 const error = ref('')
 const searchQuery = ref('')
@@ -144,7 +145,8 @@ const totalPages = computed(() => {
 
 const totalCourses = computed(() => courses.value.length)
 const totalRatings = computed(() => {
-  return courses.value.reduce((sum, course) => sum + (course.ratingCount || 0), 0)
+  // 使用 allRatings 数组长度确保与 Analytics 页面一致
+  return allRatings.value.length
 })
 const averageRating = computed(() => {
   if (courses.value.length === 0) return 0
@@ -161,6 +163,9 @@ async function loadCourses() {
     const result = await courseService.getCourses()
     if (result.ok) {
       courses.value = result.courses || []
+      
+      // 加载所有评分数据（与Analytics页面保持一致）
+      allRatings.value = await courseRatingService.getAllRatings()
       
       // 为每个课程加载评分数据
       for (const course of courses.value) {
@@ -197,7 +202,10 @@ async function loadCourseRatings(courseId) {
 
 // 删除课程（同时删除所有评分）
 async function deleteCourse(course) {
-  const confirmMessage = `Are you sure you want to delete course "${course.title}"?\n\nThis will also delete all ${course.ratingCount || 0} ratings for this course.\n\nThis action CANNOT be undone!`
+  // 计算该课程的实际评分数（使用 allRatings 确保准确）
+  const courseRatingCount = allRatings.value.filter(r => r.courseId === course.id).length
+  
+  const confirmMessage = `Are you sure you want to delete course "${course.title}"?\n\nThis will also delete all ${courseRatingCount} ratings for this course.\n\nThis action CANNOT be undone!`
   
   if (!confirm(confirmMessage)) {
     return
@@ -211,13 +219,17 @@ async function deleteCourse(course) {
     // 步骤 1: 删除所有该课程的评分
     let ratingsDeleted = 0
     try {
-      const ratings = await courseRatingService.getCourseRatings(course.id)
-      console.log(`Found ${ratings.length} ratings to delete`)
+      const courseRatings = allRatings.value.filter(r => r.courseId === course.id)
+      console.log(`Found ${courseRatings.length} ratings to delete`)
       
-      for (const rating of ratings) {
+      for (const rating of courseRatings) {
         await courseRatingService.deleteRating(rating.id)
         ratingsDeleted++
       }
+      
+      // 更新 allRatings
+      allRatings.value = allRatings.value.filter(r => r.courseId !== course.id)
+      
       console.log(`✅ Deleted ${ratingsDeleted} ratings`)
     } catch (err) {
       console.warn('Error deleting ratings:', err.message)
@@ -348,13 +360,11 @@ function toggleSelectAll() {
 async function deleteSelectedCourses() {
   if (selectedCourses.value.length === 0) return
   
-  // 计算总评分数
-  const totalRatings = selectedCourses.value.reduce((sum, courseId) => {
-    const course = courses.value.find(c => c.id === courseId)
-    return sum + (course?.ratingCount || 0)
-  }, 0)
+  // 计算总评分数（使用 allRatings 确保准确性）
+  const ratingsToDelete = allRatings.value.filter(r => selectedCourses.value.includes(r.courseId))
+  const totalRatingsCount = ratingsToDelete.length
   
-  const confirmMessage = `Are you sure you want to delete ${selectedCourses.value.length} selected courses?\n\nThis will also delete approximately ${totalRatings} ratings.\n\nThis action CANNOT be undone!`
+  const confirmMessage = `Are you sure you want to delete ${selectedCourses.value.length} selected courses?\n\nThis will also delete ${totalRatingsCount} ratings.\n\nThis action CANNOT be undone!`
   
   if (!confirm(confirmMessage)) {
     return
@@ -367,8 +377,8 @@ async function deleteSelectedCourses() {
     for (const courseId of selectedCourses.value) {
       // 删除该课程的所有评分
       try {
-        const ratings = await courseRatingService.getCourseRatings(courseId)
-        for (const rating of ratings) {
+        const courseRatings = allRatings.value.filter(r => r.courseId === courseId)
+        for (const rating of courseRatings) {
           await courseRatingService.deleteRating(rating.id)
           totalRatingsDeleted++
         }
@@ -382,6 +392,10 @@ async function deleteSelectedCourses() {
     
     const deletedCount = selectedCourses.value.length
     courses.value = courses.value.filter(course => !selectedCourses.value.includes(course.id))
+    
+    // 更新 allRatings，移除已删除课程的评分
+    allRatings.value = allRatings.value.filter(r => !selectedCourses.value.includes(r.courseId))
+    
     selectedCourses.value = []
     
     showSuccessMessage(`✅ ${deletedCount} courses deleted successfully\n\nAlso deleted ${totalRatingsDeleted} ratings`)
@@ -423,12 +437,6 @@ function showErrorMessage(message) {
   alert(message)
 }
 
-function handleLogout() {
-  logout()
-  router.push('/')
-}
-
-
 // 跳转到分析页面
 function goToAnalytics() {
   router.push('/admin/courses/analytics')
@@ -442,18 +450,7 @@ onMounted(() => {
 
 <template>
   <div class="admin">
-    <header class="admin__bar">
-      <div class="container admin__bar-inner">
-        <router-link to="/admin" class="logo">ADMIN MANAGE SYSTEM</router-link>
-        <div class="admin__actions">
-          <Button variant="secondary" size="medium" @click="handleLogout">Log out</Button>
-          <div class="chip">
-            <span class="chip__avatar">A</span>
-            <span>Admin</span>
-          </div>
-        </div>
-      </div>
-    </header>
+    <AdminHeader />
 
     <main class="container admin__content">
       <div class="page-header">

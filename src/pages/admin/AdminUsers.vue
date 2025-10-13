@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { logout } from '@/lib/auth'
 import { useRouter } from 'vue-router'
+import AdminHeader from '@/components/AdminHeader.vue'
 import Button from '@/components/Button.vue'
 import { userService } from '@/lib/firebaseService'
 
@@ -347,11 +347,6 @@ function showErrorMessage(message) {
   alert(message)
 }
 
-function handleLogout() {
-  logout()
-  router.push('/')
-}
-
 // 页面加载时获取用户数据
 onMounted(() => {
   loadUsers()
@@ -360,18 +355,7 @@ onMounted(() => {
 
 <template>
   <div class="admin">
-    <header class="admin__bar">
-      <div class="container admin__bar-inner">
-        <router-link to="/admin" class="logo">ADMIN MANAGE SYSTEM</router-link>
-        <div class="admin__actions">
-          <Button variant="secondary" size="medium" @click="handleLogout">Log out</Button>
-          <div class="chip">
-            <span class="chip__avatar">A</span>
-            <span>Admin</span>
-          </div>
-        </div>
-      </div>
-    </header>
+    <AdminHeader />
 
     <main class="container admin__content">
       <div class="page-header">
