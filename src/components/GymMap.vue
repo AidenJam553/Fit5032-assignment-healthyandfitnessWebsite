@@ -470,7 +470,7 @@ const searchNearbyGyms = (location) => {
         }
       })
       
-      // Emit the found gyms to parent component
+      // Emit the found gyms to parent component with photos
       emit('placesFound', results.map(place => ({
         id: place.place_id,
         name: place.name,
@@ -478,7 +478,10 @@ const searchNearbyGyms = (location) => {
         lng: place.geometry.location.lng(),
         rating: place.rating || 0,
         address: place.vicinity,
-        isRealPlace: true
+        isRealPlace: true,
+        photoUrl: place.photos && place.photos[0] 
+          ? place.photos[0].getUrl({ maxWidth: 400, maxHeight: 300 })
+          : null
       })))
       
       console.log(`Found ${results.length} gyms near map center (${location.lat.toFixed(4)}, ${location.lng.toFixed(4)})`)

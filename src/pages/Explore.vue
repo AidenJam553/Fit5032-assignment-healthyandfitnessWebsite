@@ -469,190 +469,217 @@ const viewGymOnMap = (gym) => {
             </div>
           </div>
 
-          <!-- Table with sorting and filtering -->
-          <div v-if="filteredGyms.length > 0" class="table-container">
-            <table class="gyms-table">
-              <thead>
-                <tr>
-                  <th class="sortable" @click="sortBy('name')">
-                    <div class="header-content">
-                      <span>Gym Name</span>
-                      <span class="sort-icon">{{ getSortIcon('name') }}</span>
-                    </div>
-                    <div class="filter-input">
-                      <input 
-                        v-model="columnFilters.name" 
-                        placeholder="Filter by name..."
-                        class="column-filter"
-                      />
-                      <button 
-                        v-if="columnFilters.name" 
-                        @click="clearColumnFilter('name')"
-                        class="clear-filter"
-                      >×</button>
-                    </div>
-                  </th>
-                  <th class="sortable" @click="sortBy('rating')">
-                    <div class="header-content">
-                      <span>Rating</span>
-                      <span class="sort-icon">{{ getSortIcon('rating') }}</span>
-                    </div>
-                    <div class="filter-input">
-                      <input 
-                        v-model="columnFilters.rating" 
-                        placeholder="Min rating..."
-                        type="number"
-                        min="0"
-                        max="5"
-                        step="0.1"
-                        class="column-filter"
-                      />
-                      <button 
-                        v-if="columnFilters.rating" 
-                        @click="clearColumnFilter('rating')"
-                        class="clear-filter"
-                      >×</button>
-                    </div>
-                  </th>
-                  <th class="sortable" @click="sortBy('distance')">
-                    <div class="header-content">
-                      <span>Distance</span>
-                      <span class="sort-icon">{{ getSortIcon('distance') }}</span>
-                    </div>
-                    <div class="filter-input">
-                      <input 
-                        v-model="columnFilters.distance" 
-                        placeholder="Max distance..."
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        class="column-filter"
-                      />
-                      <button 
-                        v-if="columnFilters.distance" 
-                        @click="clearColumnFilter('distance')"
-                        class="clear-filter"
-                      >×</button>
-                    </div>
-                  </th>
-                  <th class="sortable" @click="sortBy('address')">
-                    <div class="header-content">
-                      <span>Address</span>
-                      <span class="sort-icon">{{ getSortIcon('address') }}</span>
-                    </div>
-                    <div class="filter-input">
-                      <input 
-                        v-model="columnFilters.address" 
-                        placeholder="Filter by address..."
-                        class="column-filter"
-                      />
-                      <button 
-                        v-if="columnFilters.address" 
-                        @click="clearColumnFilter('address')"
-                        class="clear-filter"
-                      >×</button>
-                    </div>
-                  </th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="gym in paginatedGyms" :key="gym.id" class="gym-row">
-                  <td class="gym-name">
-                    <div class="name-content">
-                      <h4>{{ gym.name }}</h4>
-                    </div>
-                  </td>
-                  <td class="rating-cell">
-                    <div class="rating-content">
-                      <span class="rating-value">{{ gym.rating.toFixed(1) }}/5</span>
-                      <div class="stars">⭐</div>
-                    </div>
-                  </td>
-                  <td class="distance-cell">
-                    <span class="distance-value">{{ gym.distance }} km</span>
-                  </td>
-                  <td class="address-cell">
-                    <span class="address-value">{{ gym.address }}</span>
-                  </td>
-                  <td class="actions-cell">
-                    <div class="action-buttons">
-                      <a 
-                        :href="`https://www.google.com/maps/dir/?api=1&destination=${gym.lat},${gym.lng}`" 
-                        target="_blank" 
-                        rel="noopener"
-                        class="action-btn primary"
-                      >
-                        Directions
-                      </a>
-                      <button 
-                        @click="viewGymOnMap(gym)"
-                        class="action-btn secondary"
-                      >
-                        View Map
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            <!-- Pagination -->
-            <div class="pagination-container">
-              <div class="pagination-info">
-                <span>Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to {{ Math.min(currentPage * itemsPerPage, filteredGyms.length) }} of {{ filteredGyms.length }} results</span>
+          <!-- Filters and Sorting Controls -->
+          <div v-if="filteredGyms.length > 0" class="controls-container">
+            <div class="filters-row">
+              <div class="filter-group">
+                <label>Name:</label>
+                <input 
+                  v-model="columnFilters.name" 
+                  placeholder="Filter by name..."
+                  class="filter-input"
+                />
                 <button 
-                  v-if="Object.values(columnFilters).some(filter => filter)"
-                  @click="clearAllFilters"
-                  class="clear-all-filters"
-                >
-                  Clear all filters
-                </button>
+                  v-if="columnFilters.name" 
+                  @click="clearColumnFilter('name')"
+                  class="clear-filter-btn"
+                >×</button>
               </div>
-              
-              <div class="pagination-controls">
+              <div class="filter-group">
+                <label>Min Rating:</label>
+                <input 
+                  v-model="columnFilters.rating" 
+                  placeholder="Min rating..."
+                  type="number"
+                  min="0"
+                  max="5"
+                  step="0.1"
+                  class="filter-input"
+                />
                 <button 
-                  @click="prevPage" 
-                  :disabled="currentPage === 1"
-                  class="pagination-btn"
-                >
-                  ← Previous
+                  v-if="columnFilters.rating" 
+                  @click="clearColumnFilter('rating')"
+                  class="clear-filter-btn"
+                >×</button>
+              </div>
+              <div class="filter-group">
+                <label>Max Distance:</label>
+                <input 
+                  v-model="columnFilters.distance" 
+                  placeholder="Max distance..."
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  class="filter-input"
+                />
+                <button 
+                  v-if="columnFilters.distance" 
+                  @click="clearColumnFilter('distance')"
+                  class="clear-filter-btn"
+                >×</button>
+              </div>
+              <div class="filter-group">
+                <label>Address:</label>
+                <input 
+                  v-model="columnFilters.address" 
+                  placeholder="Filter by address..."
+                  class="filter-input"
+                />
+                <button 
+                  v-if="columnFilters.address" 
+                  @click="clearColumnFilter('address')"
+                  class="clear-filter-btn"
+                >×</button>
+              </div>
+            </div>
+            <div class="sorting-row">
+              <div class="sort-buttons">
+                <button @click="sortBy('name')" class="sort-btn" :class="{ active: sortField === 'name' }">
+                  Name {{ getSortIcon('name') }}
                 </button>
-                
-                <div class="page-numbers">
-                  <button 
-                    v-for="page in Math.min(5, totalPages)" 
-                    :key="page"
-                    @click="goToPage(page)"
-                    :class="{ active: page === currentPage }"
-                    class="page-btn"
-                  >
-                    {{ page }}
-                  </button>
-                  <span v-if="totalPages > 5" class="page-ellipsis">...</span>
-                  <button 
-                    v-if="totalPages > 5"
-                    @click="goToPage(totalPages)"
-                    :class="{ active: currentPage === totalPages }"
-                    class="page-btn"
-                  >
-                    {{ totalPages }}
-                  </button>
-                </div>
-                
-                <button 
-                  @click="nextPage" 
-                  :disabled="currentPage === totalPages"
-                  class="pagination-btn"
-                >
-                  Next →
+                <button @click="sortBy('rating')" class="sort-btn" :class="{ active: sortField === 'rating' }">
+                  Rating {{ getSortIcon('rating') }}
+                </button>
+                <button @click="sortBy('distance')" class="sort-btn" :class="{ active: sortField === 'distance' }">
+                  Distance {{ getSortIcon('distance') }}
+                </button>
+                <button @click="sortBy('address')" class="sort-btn" :class="{ active: sortField === 'address' }">
+                  Address {{ getSortIcon('address') }}
                 </button>
               </div>
             </div>
           </div>
+
+          <!-- Cards Grid -->
+          <div v-if="filteredGyms.length > 0" class="cards-grid">
+            <div v-for="gym in paginatedGyms" :key="gym.id" class="gym-card">
+              <div class="card-image">
+                <img 
+                  v-if="gym.photoUrl" 
+                  :src="gym.photoUrl" 
+                  :alt="gym.name"
+                  class="gym-image"
+                />
+                <div v-else class="image-placeholder">
+                  <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <path d="M16 10a4 4 0 0 1-8 0"></path>
+                  </svg>
+                </div>
+                <div class="card-badge" v-if="gym.isRealPlace">Real Data</div>
+              </div>
+              
+              <div class="card-content">
+                <div class="card-header">
+                  <h3 class="gym-name">{{ gym.name }}</h3>
+                  <div class="rating-badge">
+                    <span class="rating-value">{{ gym.rating.toFixed(1) }}</span>
+                    <span class="rating-stars">⭐</span>
+                  </div>
+                </div>
+                
+                <div class="card-info">
+                  <div class="info-item" v-if="gym.distance">
+                    <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    <span>{{ gym.distance }} km away</span>
+                  </div>
+                  
+                  <div class="info-item" v-if="gym.address">
+                    <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    <span class="address-text">{{ gym.address }}</span>
+                  </div>
+                </div>
+                
+                <div class="card-actions">
+                  <a 
+                    :href="`https://www.google.com/maps/dir/?api=1&destination=${gym.lat},${gym.lng}`" 
+                    target="_blank" 
+                    rel="noopener"
+                    class="action-btn primary"
+                  >
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    Directions
+                  </a>
+                  <button 
+                    @click="viewGymOnMap(gym)"
+                    class="action-btn secondary"
+                  >
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    View Map
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pagination -->
+          <div class="pagination-container">
+            <div class="pagination-info">
+              <span>Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to {{ Math.min(currentPage * itemsPerPage, filteredGyms.length) }} of {{ filteredGyms.length }} results</span>
+              <button 
+                v-if="Object.values(columnFilters).some(filter => filter)"
+                @click="clearAllFilters"
+                class="clear-all-filters"
+              >
+                Clear all filters
+              </button>
+            </div>
+            
+            <div class="pagination-controls">
+              <button 
+                @click="prevPage" 
+                :disabled="currentPage === 1"
+                class="pagination-btn"
+              >
+                ← Previous
+              </button>
+              
+              <div class="page-numbers">
+                <button 
+                  v-for="page in Math.min(5, totalPages)" 
+                  :key="page"
+                  @click="goToPage(page)"
+                  :class="{ active: page === currentPage }"
+                  class="page-btn"
+                >
+                  {{ page }}
+                </button>
+                <span v-if="totalPages > 5" class="page-ellipsis">...</span>
+                <button 
+                  v-if="totalPages > 5"
+                  @click="goToPage(totalPages)"
+                  :class="{ active: currentPage === totalPages }"
+                  class="page-btn"
+                >
+                  {{ totalPages }}
+                </button>
+              </div>
+              
+              <button 
+                @click="nextPage" 
+                :disabled="currentPage === totalPages"
+                class="pagination-btn"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
           
           <!-- No gyms found in list view -->
-          <div v-else class="empty-state">
+          <div v-if="filteredGyms.length === 0" class="empty-state">
             <div class="empty-icon">🏋️</div>
             <h3>No gyms found</h3>
             <p>Try adjusting your filters or enable location services</p>
@@ -1120,89 +1147,61 @@ const viewGymOnMap = (gym) => {
   animation: fadeIn 0.3s ease;
 }
 
-/* Table Styles */
-.table-container {
+/* Controls Container */
+.controls-container {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  padding: 20px;
   margin-bottom: 24px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.gyms-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
+.filters-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.gyms-table thead {
-  background: var(--green-50);
-  border-bottom: 2px solid var(--green-200);
-}
-
-.gyms-table th {
-  padding: 16px 12px;
-  text-align: left;
-  font-weight: 600;
-  color: var(--green-700);
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   position: relative;
 }
 
-.gyms-table th.sortable {
-  cursor: pointer;
-  user-select: none;
-  transition: background-color 0.2s ease;
-}
-
-.gyms-table th.sortable:hover {
-  background: var(--green-100);
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.sort-icon {
-  font-size: 16px;
-  color: var(--green-600);
-  margin-left: 8px;
+.filter-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green-700);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .filter-input {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.column-filter {
-  width: 100%;
-  padding: 6px 8px;
+  padding: 8px 12px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 14px;
   background: white;
   transition: border-color 0.2s ease;
 }
 
-.column-filter:focus {
+.filter-input:focus {
   outline: none;
   border-color: var(--green-500);
   box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.1);
 }
 
-.clear-filter {
+.clear-filter-btn {
   position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
+  right: 8px;
+  top: 24px;
   background: #f3f4f6;
   border: none;
   border-radius: 50%;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1212,73 +1211,202 @@ const viewGymOnMap = (gym) => {
   transition: all 0.2s ease;
 }
 
-.clear-filter:hover {
+.clear-filter-btn:hover {
   background: #e5e7eb;
   color: #374151;
 }
 
-.gyms-table tbody tr {
-  border-bottom: 1px solid #f3f4f6;
-  transition: background-color 0.2s ease;
+.sorting-row {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 16px;
 }
 
-.gyms-table tbody tr:hover {
-  background: #f8fafc;
-}
-
-.gyms-table tbody tr:last-child {
-  border-bottom: none;
-}
-
-.gyms-table td {
-  padding: 12px;
-  vertical-align: top;
-}
-
-.gym-name h4 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--green-700);
-  line-height: 1.3;
-}
-
-.rating-content {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.rating-value {
-  font-weight: 600;
-  color: var(--text-900);
-}
-
-.stars {
-  font-size: 14px;
-}
-
-.distance-value {
-  font-weight: 600;
-  color: var(--green-600);
-}
-
-.address-value {
-  color: #64748b;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.action-buttons {
+.sort-buttons {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.action-btn {
-  padding: 6px 12px;
+.sort-btn {
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
   border-radius: 6px;
-  font-size: 12px;
+  background: white;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sort-btn:hover {
+  background: var(--green-50);
+  border-color: var(--green-300);
+  color: var(--green-700);
+}
+
+.sort-btn.active {
+  background: var(--green-600);
+  border-color: var(--green-600);
+  color: white;
+}
+
+/* Cards Grid */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.gym-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: 1px solid #f3f4f6;
+}
+
+.gym-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+  border-color: var(--green-200);
+}
+
+.card-image {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+}
+
+.gym-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.gym-card:hover .gym-image {
+  transform: scale(1.05);
+}
+
+.image-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--green-50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--green-400);
+}
+
+.placeholder-icon {
+  width: 48px;
+  height: 48px;
+  stroke-width: 1.5;
+}
+
+.card-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #3b82f6;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-content {
+  padding: 20px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.gym-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--green-700);
+  line-height: 1.3;
+  flex: 1;
+}
+
+.rating-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rating-value {
+  font-weight: 700;
+}
+
+.rating-stars {
+  font-size: 16px;
+}
+
+.card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.info-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+  color: var(--green-600);
+  flex-shrink: 0;
+}
+
+.address-text {
+  line-height: 1.4;
+}
+
+.card-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 600;
   text-decoration: none;
   border: none;
@@ -1295,6 +1423,7 @@ const viewGymOnMap = (gym) => {
 .action-btn.primary:hover {
   background: var(--green-700);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
 }
 
 .action-btn.secondary {
@@ -1306,6 +1435,13 @@ const viewGymOnMap = (gym) => {
 .action-btn.secondary:hover {
   background: var(--green-100);
   border-color: var(--green-300);
+  transform: translateY(-1px);
+}
+
+.btn-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
 }
 
 /* Pagination Styles */
@@ -1686,38 +1822,46 @@ const viewGymOnMap = (gym) => {
   }
 }
 
+@media (max-width: 768px) {
+  .cards-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .filters-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .sort-buttons {
+    flex-direction: column;
+  }
+  
+  .sort-btn {
+    justify-content: center;
+  }
+}
+
 @media (max-width: 480px) {
   .card-actions {
     flex-direction: column;
-  }
-  
-  .action-link {
-    width: 100%;
-  }
-  
-  /* Table responsive styles */
-  .table-container {
-    overflow-x: auto;
-  }
-  
-  .gyms-table {
-    min-width: 600px;
-  }
-  
-  .gyms-table th,
-  .gyms-table td {
-    padding: 8px 6px;
-    font-size: 12px;
-  }
-  
-  .action-buttons {
-    flex-direction: column;
-    gap: 4px;
+    gap: 8px;
   }
   
   .action-btn {
-    padding: 4px 8px;
-    font-size: 11px;
+    width: 100%;
+  }
+  
+  .card-content {
+    padding: 16px;
+  }
+  
+  .gym-name {
+    font-size: 16px;
+  }
+  
+  .card-image {
+    height: 160px;
   }
   
   .pagination-container {
