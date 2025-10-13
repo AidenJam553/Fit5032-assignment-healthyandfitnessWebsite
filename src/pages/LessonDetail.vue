@@ -745,9 +745,9 @@ onUnmounted(() => {
                 :class="{ 'animate-in': showContent }" 
                 style="animation-delay: 1.3s" 
                 @click="toggleWishlist"
-                :title="isInWishlist ? 'Remove from My Courses' : 'Add to My Courses'"
+                :title="isInWishlist ? 'Unsubscribe from This Course' : 'Subscribe to This Course'"
               >
-                {{ isInWishlist ? 'In My Courses' : 'Add to My Courses' }}
+                {{ isInWishlist ? 'Subscribed' : 'Subscribe to This Course' }}
               </Button>
             </div>
           </div>

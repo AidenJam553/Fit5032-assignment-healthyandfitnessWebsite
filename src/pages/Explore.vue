@@ -25,8 +25,8 @@ const handlePlacesFound = (places) => {
 }
 
 const enrichedGyms = computed(() => {
-  // If we have real gyms from Places API, use those
-  const gymsToUse = realGyms.value.length > 0 ? realGyms.value : gyms.filtered
+  // Only use real gyms from Places API
+  const gymsToUse = realGyms.value
   
   if (!gyms.location) return gymsToUse
   
@@ -41,7 +41,7 @@ const enrichedGyms = computed(() => {
   })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
 })
 
-// Suggestions for autocomplete (show top 5 matches)
+// Suggestions for autocomplete (show top 5 matches from real gyms only)
 const searchSuggestions = computed(() => {
   if (!gyms.query || gyms.query.length < 1) {
     return []
@@ -147,27 +147,37 @@ const clearSearch = () => {
       </div>
 
       <div class="toolbar">
-        <div class="search-box">
-          <span class="search-icon">🔍</span>
-          <input 
-            ref="searchInputRef"
-            placeholder="Search gyms by name or address..." 
-            v-model="gyms.query" 
-            class="search-input"
-            @focus="handleSearchFocus"
-            @input="handleSearchInput"
-            @blur="handleSearchBlur"
-            @keydown="handleKeyDown"
-            autocomplete="off"
-          />
-          <button 
-            v-if="gyms.query" 
-            class="clear-search"
-            @click="clearSearch"
-            aria-label="Clear search"
-          >
-            ×
-          </button>
+        <div class="search-container">
+          <div class="search-box">
+            <div class="search-icon-wrapper">
+              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+            </div>
+            <input 
+              ref="searchInputRef"
+              placeholder="Search gyms by name or address..." 
+              v-model="gyms.query" 
+              class="search-input"
+              @focus="handleSearchFocus"
+              @input="handleSearchInput"
+              @blur="handleSearchBlur"
+              @keydown="handleKeyDown"
+              autocomplete="off"
+            />
+            <button 
+              v-if="gyms.query" 
+              class="clear-search"
+              @click="clearSearch"
+              aria-label="Clear search"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
           
           <!-- Search Suggestions Dropdown -->
           <transition name="suggestions">
@@ -176,27 +186,60 @@ const clearSearch = () => {
               class="search-suggestions"
             >
               <div class="suggestions-header">
-                <span>{{ searchSuggestions.length }} result{{ searchSuggestions.length !== 1 ? 's' : '' }}</span>
-              </div>
-              <div 
-                v-for="(gym, index) in searchSuggestions" 
-                :key="gym.id || gym.place?.place_id"
-                class="suggestion-item"
-                :class="{ selected: index === selectedSuggestionIndex }"
-                @click="selectSuggestion(gym)"
-              >
-                <div class="suggestion-icon">
-                  {{ gym.isRealPlace ? '🔵' : '🏋️' }}
+                <div class="suggestions-count">
+                  <svg class="count-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                  </svg>
+                  <span>{{ searchSuggestions.length }} result{{ searchSuggestions.length !== 1 ? 's' : '' }}</span>
                 </div>
-                <div class="suggestion-content">
-                  <div class="suggestion-name">{{ gym.name }}</div>
-                  <div class="suggestion-meta">
-                    <span v-if="gym.rating" class="suggestion-rating">⭐ {{ gym.rating }}</span>
-                    <span v-if="gym.distance" class="suggestion-distance">📍 {{ gym.distance }} km</span>
-                    <span v-if="gym.address" class="suggestion-address">{{ gym.address }}</span>
+              </div>
+              <div class="suggestions-list">
+                <div 
+                  v-for="(gym, index) in searchSuggestions" 
+                  :key="gym.id || gym.place?.place_id"
+                  class="suggestion-item"
+                  :class="{ selected: index === selectedSuggestionIndex }"
+                  @click="selectSuggestion(gym)"
+                >
+                  <div class="suggestion-icon">
+                    <div class="icon-circle" :class="{ 'real-place': gym.isRealPlace }">
+                      <svg v-if="gym.isRealPlace" class="place-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                      </svg>
+                      <svg v-else class="gym-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <path d="M16 10a4 4 0 0 1-8 0"></path>
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="suggestion-content">
+                    <div class="suggestion-name">{{ gym.name }}</div>
+                    <div class="suggestion-meta">
+                      <span v-if="gym.rating" class="suggestion-rating">
+                        <svg class="star-icon" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"></polygon>
+                        </svg>
+                        {{ gym.rating }}
+                      </span>
+                      <span v-if="gym.distance" class="suggestion-distance">
+                        <svg class="location-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                          <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                        {{ gym.distance }} km
+                      </span>
+                      <span v-if="gym.address" class="suggestion-address">{{ gym.address }}</span>
+                    </div>
+                  </div>
+                  <div class="suggestion-arrow">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                      <polyline points="12,5 19,12 12,19"></polyline>
+                    </svg>
                   </div>
                 </div>
-                <div class="suggestion-arrow">→</div>
               </div>
             </div>
           </transition>
@@ -208,9 +251,15 @@ const clearSearch = () => {
               class="search-suggestions no-results"
             >
               <div class="no-results-content">
-                <span class="no-results-icon">🔍</span>
-                <p>No gyms found for "{{ gyms.query }}"</p>
-                <small>Try a different search term</small>
+                <div class="no-results-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                  </svg>
+                </div>
+                <h4>No gyms found</h4>
+                <p>No results for "{{ gyms.query }}"</p>
+                <small>Try searching with different keywords</small>
               </div>
             </div>
           </transition>
@@ -265,14 +314,14 @@ const clearSearch = () => {
       <!-- Grid View -->
       <transition name="fade">
         <div v-if="viewMode === 'grid'" class="grid-view">
-          <div class="results-header">
+          <div v-if="enrichedGyms.length > 0" class="results-header">
             <h2>{{ enrichedGyms.length }} gym{{ enrichedGyms.length !== 1 ? 's' : '' }} found</h2>
             <div class="results-meta">
-              <span v-if="realGyms.length > 0" class="real-data-badge">🔵 Real data from Places API</span>
+              <span class="real-data-badge">🔵 Real data from Places API</span>
               <span v-if="gyms.location" class="sort-indicator">Sorted by distance</span>
             </div>
-      </div>
-      <div class="grid">
+          </div>
+          <div v-if="enrichedGyms.length > 0" class="grid">
             <Card 
               variant="elevated" 
               size="medium" 
@@ -285,21 +334,21 @@ const clearSearch = () => {
           <template #header>
                 <div class="card-header">
             <h3>{{ g.name }}</h3>
-                  <span class="rating-badge">⭐ {{ g.rating }}</span>
+                  <span class="rating-badge">⭐ {{ g.rating.toFixed(1) }}</span>
                 </div>
           </template>
               <div class="card-content">
                 <div class="info-row">
                   <span class="label">Rating:</span>
-                  <span class="value">{{ g.rating }}/5</span>
+                  <span class="value">{{ g.rating.toFixed(1) }}/5</span>
                 </div>
                 <div class="info-row" v-if="g.distance">
                   <span class="label">Distance:</span>
                   <span class="value">{{ g.distance }} km away</span>
                 </div>
-                <div class="info-row">
-                  <span class="label">Location:</span>
-                  <span class="value coordinates">{{ g.lat.toFixed(4) }}, {{ g.lng.toFixed(4) }}</span>
+                <div class="info-row" v-if="g.address">
+                  <span class="label">Address:</span>
+                  <span class="value address">{{ g.address }}</span>
                 </div>
               </div>
           <template #footer>
@@ -322,14 +371,22 @@ const clearSearch = () => {
           </template>
         </Card>
           </div>
+          
+          <!-- No gyms found in grid view -->
+          <div v-else class="empty-state">
+            <div class="empty-icon">🏋️</div>
+            <h3>No gyms found</h3>
+            <p>Try dragging the map to explore different areas or enable location services</p>
+          </div>
         </div>
       </transition>
 
-      <!-- Empty State -->
-      <div v-if="gyms.filtered.length === 0" class="empty-state">
+      <!-- Empty State for search -->
+      <div v-if="gyms.query && enrichedGyms.length === 0 && !searchingPlaces" class="empty-state">
         <div class="empty-icon">🔍</div>
         <h3>No gyms found</h3>
-        <p>Try adjusting your search query</p>
+        <p>No results for "{{ gyms.query }}"</p>
+        <small>Try adjusting your search query or explore different areas</small>
       </div>
     </div>
   </div>
@@ -366,95 +423,140 @@ const clearSearch = () => {
   flex-wrap: wrap;
 }
 
-.search-box {
+/* Search Container */
+.search-container {
   position: relative;
   flex: 1;
-  min-width: 250px;
+  min-width: 280px;
 }
 
-.search-icon {
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 18px;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.search-input { 
-  width: 100%;
-  border: 2px solid var(--green-200); 
-  border-radius: 12px; 
-  padding: 12px 40px 12px 44px;
-  font-size: 15px;
-  transition: all 0.2s;
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
   background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 4px;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.search-input:focus {
-  outline: none;
+.search-box:focus-within {
   border-color: var(--green-600);
-  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
-  border-radius: 12px 12px 0 0;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1), 0 4px 12px rgba(22, 163, 74, 0.15);
+  transform: translateY(-1px);
 }
 
-.search-input:focus + .search-suggestions {
-  border-top: none;
-}
-
-.clear-search {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: #e5e7eb;
-  border: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  font-size: 20px;
-  color: #64748b;
-  cursor: pointer;
+.search-icon-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
-  z-index: 2;
+  width: 40px;
+  height: 40px;
+  margin-left: 8px;
+  color: #9ca3af;
+  transition: color 0.2s ease;
+}
+
+.search-box:focus-within .search-icon-wrapper {
+  color: var(--green-600);
+}
+
+.search-icon {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+}
+
+.search-input { 
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 12px 8px 12px 4px;
+  font-size: 15px;
+  background: transparent;
+  color: var(--text-900);
+}
+
+.search-input::placeholder {
+  color: #9ca3af;
+  transition: color 0.2s ease;
+}
+
+.search-box:focus-within .search-input::placeholder {
+  color: #d1d5db;
+}
+
+.clear-search {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-right: 8px;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 8px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0.7;
 }
 
 .clear-search:hover {
-  background: #d1d5db;
+  background: #e5e7eb;
   color: var(--text-900);
-  transform: translateY(-50%) scale(1.1);
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.clear-search svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
 }
 
 /* Search Suggestions */
 .search-suggestions {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 8px);
   left: 0;
   right: 0;
   background: white;
-  border: 2px solid var(--green-600);
-  border-top: 1px solid var(--green-200);
-  border-radius: 0 0 12px 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   z-index: 1000;
   max-height: 400px;
-  overflow-y: auto;
-  margin-top: -2px;
+  overflow: hidden;
 }
 
 .suggestions-header {
-  padding: 8px 16px;
-  background: var(--green-50);
-  border-bottom: 1px solid var(--green-100);
+  padding: 12px 16px 8px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.suggestions-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 12px;
-  color: #64748b;
+  color: #6b7280;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.count-icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+}
+
+.suggestions-list {
+  max-height: 320px;
+  overflow-y: auto;
 }
 
 .suggestion-item {
@@ -463,8 +565,8 @@ const clearSearch = () => {
   gap: 12px;
   padding: 12px 16px;
   cursor: pointer;
-  transition: all 0.2s;
-  border-bottom: 1px solid var(--green-50);
+  transition: all 0.2s ease;
+  border-bottom: 1px solid #f8fafc;
 }
 
 .suggestion-item:last-child {
@@ -473,12 +575,35 @@ const clearSearch = () => {
 
 .suggestion-item:hover,
 .suggestion-item.selected {
-  background: var(--green-50);
+  background: #f8fafc;
 }
 
 .suggestion-icon {
-  font-size: 24px;
   flex-shrink: 0;
+}
+
+.icon-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  color: #6b7280;
+  transition: all 0.2s ease;
+}
+
+.icon-circle.real-place {
+  background: #eff6ff;
+  color: #3b82f6;
+}
+
+.place-icon,
+.gym-icon {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
 }
 
 .suggestion-content {
@@ -487,55 +612,91 @@ const clearSearch = () => {
 }
 
 .suggestion-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-900);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 .suggestion-meta {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
   font-size: 12px;
-  color: #64748b;
+  color: #6b7280;
   flex-wrap: wrap;
 }
 
 .suggestion-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   color: #f59e0b;
   font-weight: 600;
 }
 
 .suggestion-distance {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   color: var(--green-700);
   font-weight: 600;
 }
 
 .suggestion-address {
-  color: #94a3b8;
+  color: #9ca3af;
   font-size: 11px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.star-icon,
+.location-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.star-icon {
+  fill: currentColor;
+}
+
+.location-icon {
+  stroke-width: 2;
 }
 
 .suggestion-arrow {
-  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f8fafc;
   color: var(--green-600);
+  transition: all 0.2s ease;
   flex-shrink: 0;
-  transition: transform 0.2s;
 }
 
 .suggestion-item:hover .suggestion-arrow {
-  transform: translateX(4px);
+  background: var(--green-50);
+  transform: translateX(2px);
+}
+
+.suggestion-arrow svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
 }
 
 /* No results */
 .search-suggestions.no-results {
-  padding: 24px;
+  padding: 32px 24px;
   text-align: center;
 }
 
@@ -543,23 +704,39 @@ const clearSearch = () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .no-results-icon {
-  font-size: 48px;
-  opacity: 0.3;
+  width: 48px;
+  height: 48px;
+  color: #d1d5db;
+  margin-bottom: 4px;
+}
+
+.no-results-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke-width: 1.5;
+}
+
+.no-results-content h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-900);
 }
 
 .no-results-content p {
   margin: 0;
-  color: var(--text-900);
-  font-weight: 600;
+  font-size: 14px;
+  color: #6b7280;
 }
 
 .no-results-content small {
-  color: #64748b;
   font-size: 12px;
+  color: #9ca3af;
+  margin-top: 4px;
 }
 
 /* Suggestions animation */
@@ -579,22 +756,21 @@ const clearSearch = () => {
 }
 
 /* Scrollbar styling for suggestions */
-.search-suggestions::-webkit-scrollbar {
-  width: 8px;
+.suggestions-list::-webkit-scrollbar {
+  width: 6px;
 }
 
-.search-suggestions::-webkit-scrollbar-track {
-  background: var(--green-50);
-  border-radius: 0 0 12px 0;
+.suggestions-list::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.search-suggestions::-webkit-scrollbar-thumb {
-  background: var(--green-300);
-  border-radius: 4px;
+.suggestions-list::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
 }
 
-.search-suggestions::-webkit-scrollbar-thumb:hover {
-  background: var(--green-400);
+.suggestions-list::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 
 .toolbar-actions {
@@ -775,9 +951,13 @@ const clearSearch = () => {
   font-weight: 600;
 }
 
-.info-row .coordinates {
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
+.info-row .address {
+  font-size: 13px;
+  color: #64748b;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .card-actions {
@@ -878,12 +1058,16 @@ const clearSearch = () => {
     align-items: stretch;
   }
   
-  .search-box {
+  .search-container {
     width: 100%;
   }
   
   .search-suggestions {
     max-height: 300px;
+  }
+  
+  .suggestions-list {
+    max-height: 240px;
   }
   
   .toolbar-actions {

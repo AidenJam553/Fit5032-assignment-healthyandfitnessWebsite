@@ -29,6 +29,8 @@ const mapError = ref(false)
 const placesService = ref(null)
 const searchingPlaces = ref(false)
 const nearbyGyms = ref([]) // Store nearby gyms sorted by distance
+const mapCenter = ref(null) // Track map center for dynamic search
+const searchRadius = ref(5000) // Search radius in meters (5km)
 
 // Google Maps API Key - should be in environment variable
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY_HERE'
@@ -141,15 +143,18 @@ const initMap = async () => {
     infoWindow.value = new google.maps.InfoWindow()
     placesService.value = new google.maps.places.PlacesService(map.value)
 
+    // Set up map center change listener
+    setupMapCenterListener()
+
     // Add user location marker if available
     if (props.userLocation) {
       addUserMarker(props.userLocation)
       // Search for nearby real gyms using Places API
       searchNearbyGyms(props.userLocation)
+    } else {
+      // If no user location, search around map center
+      searchNearbyGyms(center)
     }
-
-    // Add gym markers (fallback data)
-    addGymMarkers(enrichedGyms.value)
     
     isLoading.value = false
   } catch (error) {
@@ -191,57 +196,7 @@ const addUserMarker = (location) => {
   })
 }
 
-// Add gym markers
-const addGymMarkers = (gyms) => {
-  // Clear existing markers
-  markers.value.forEach(marker => marker.setMap(null))
-  markers.value = []
-
-  gyms.forEach((gym, index) => {
-    const marker = new google.maps.Marker({
-      position: { lat: gym.lat, lng: gym.lng },
-      map: map.value,
-      title: gym.name,
-      animation: google.maps.Animation.DROP,
-      icon: {
-        url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
-      }
-    })
-
-    marker.addListener('click', () => {
-      const content = `
-        <div style="padding: 12px; max-width: 250px;">
-          <h3 style="margin: 0 0 8px 0; color: #16a34a; font-size: 16px;">${gym.name}</h3>
-          <div style="margin: 4px 0; color: #64748b; font-size: 14px;">
-            <strong>Rating:</strong> ⭐ ${gym.rating}/5
-          </div>
-          ${gym.distance ? `
-            <div style="margin: 4px 0; color: #64748b; font-size: 14px;">
-              <strong>Distance:</strong> ${gym.distance} km
-            </div>
-          ` : ''}
-          <div style="margin-top: 12px;">
-            <button 
-              onclick="window.selectGymFromMap('${gym.id}')"
-              style="background: #16a34a; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; width: 100%;"
-            >
-              Show Route
-            </button>
-          </div>
-        </div>
-      `
-      infoWindow.value.setContent(content)
-      infoWindow.value.open(map.value, marker)
-      
-      // Highlight marker
-      markers.value.forEach(m => m.setAnimation(null))
-      marker.setAnimation(google.maps.Animation.BOUNCE)
-      setTimeout(() => marker.setAnimation(null), 2000)
-    })
-
-    markers.value.push(marker)
-  })
-}
+// This function is no longer needed as we only use real gym data from Places API
 
 // Show route to gym
 const showRoute = async (gym) => {
@@ -323,6 +278,51 @@ const openInGoogleMaps = () => {
   window.open(url, '_blank')
 }
 
+// Set up map center change listener
+const setupMapCenterListener = () => {
+  if (!map.value) return
+  
+  // Listen for map center changes (when user drags the map)
+  map.value.addListener('dragend', () => {
+    const center = map.value.getCenter()
+    if (center) {
+      mapCenter.value = {
+        lat: center.lat(),
+        lng: center.lng()
+      }
+      // Debounce the search to avoid too many API calls
+      debounceSearch()
+    }
+  })
+  
+  // Also listen for zoom changes
+  map.value.addListener('zoom_changed', () => {
+    // Adjust search radius based on zoom level
+    const zoom = map.value.getZoom()
+    if (zoom >= 15) {
+      searchRadius.value = 2000 // 2km for high zoom
+    } else if (zoom >= 12) {
+      searchRadius.value = 5000 // 5km for medium zoom
+    } else {
+      searchRadius.value = 10000 // 10km for low zoom
+    }
+  })
+}
+
+// Debounce search to avoid too many API calls
+let searchTimeout = null
+const debounceSearch = () => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+  }
+  
+  searchTimeout = setTimeout(() => {
+    if (mapCenter.value) {
+      searchNearbyGyms(mapCenter.value)
+    }
+  }, 800) // Wait 800ms after user stops dragging
+}
+
 // Search for nearby gyms using Places API
 const searchNearbyGyms = (location) => {
   if (!placesService.value) return
@@ -331,7 +331,7 @@ const searchNearbyGyms = (location) => {
   
   const request = {
     location: new google.maps.LatLng(location.lat, location.lng),
-    radius: 5000, // 5km radius
+    radius: searchRadius.value,
     type: 'gym',
     keyword: 'fitness gym'
   }
@@ -372,6 +372,9 @@ const searchNearbyGyms = (location) => {
       // Store sorted gyms for the nearby list
       nearbyGyms.value = gymsWithDistance
       
+      // Clear existing real gym markers first
+      clearRealGymMarkers()
+      
       // Add markers for real gyms
       gymsWithDistance.forEach((gymData, index) => {
         const place = gymData.place
@@ -382,12 +385,14 @@ const searchNearbyGyms = (location) => {
             position: place.geometry.location,
             map: map.value,
             title: place.name,
-            animation: google.maps.Animation.DROP,
             icon: {
               url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
             }
           })
 
+          // Mark this as a real gym marker
+          marker.set('isRealGym', true)
+          
           marker.addListener('click', () => {
             // Get more details about the place
             const detailsRequest = {
@@ -471,9 +476,25 @@ const searchNearbyGyms = (location) => {
         address: place.vicinity,
         isRealPlace: true
       })))
+      
+      console.log(`Found ${results.length} gyms near map center (${location.lat.toFixed(4)}, ${location.lng.toFixed(4)})`)
     } else {
       console.warn('Places API search failed:', status)
     }
+  })
+}
+
+// Clear only real gym markers (keep user marker and static gym markers)
+const clearRealGymMarkers = () => {
+  // Filter out real gym markers (they have specific properties)
+  markers.value = markers.value.filter(marker => {
+    // Keep static gym markers (they don't have the real gym click handler)
+    const hasRealGymHandler = marker.get('isRealGym')
+    if (hasRealGymHandler) {
+      marker.setMap(null)
+      return false
+    }
+    return true
   })
 }
 
@@ -499,25 +520,15 @@ window.showRouteToPlace = (placeId, lat, lng, name) => {
   })
 }
 
-// Expose selectGym function globally for InfoWindow buttons
-window.selectGymFromMap = (gymId) => {
-  const gym = enrichedGyms.value.find(g => g.id === gymId)
-  if (gym) {
-    showRoute(gym)
-  }
-}
+// This function is no longer needed as we only use real gym data from Places API
 
-// Watch for changes in gyms or user location
-watch(() => props.gyms, (newGyms) => {
-  if (map.value) {
-    addGymMarkers(enrichedGyms.value)
-  }
-}, { deep: true })
-
+// Watch for changes in user location
 watch(() => props.userLocation, (newLocation) => {
   if (map.value && newLocation) {
     addUserMarker(newLocation)
     map.value.setCenter(newLocation)
+    // Search for gyms around the new user location
+    searchNearbyGyms(newLocation)
   }
 }, { deep: true })
 
@@ -535,7 +546,18 @@ onMounted(() => {
 
     <div v-if="searchingPlaces && !isLoading" class="places-searching">
       <div class="spinner-small"></div>
-      <span>Searching nearby gyms...</span>
+      <span>Searching gyms in this area...</span>
+    </div>
+    
+    <!-- Map Center Info -->
+    <div v-if="mapCenter && !isLoading && !searchingPlaces" class="map-center-info">
+      <div class="center-info-content">
+        <svg class="center-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>Drag map to explore different areas</span>
+      </div>
     </div>
     
     <div v-else-if="mapError" class="map-error">
@@ -588,52 +610,42 @@ onMounted(() => {
     </transition>
 
     <!-- Gym List Panel - Shows real nearby gyms sorted by distance -->
-    <div class="gym-list-panel" v-if="nearbyGyms.length > 0 || enrichedGyms.length > 0">
+    <div class="gym-list-panel" v-if="nearbyGyms.length > 0">
       <div class="gym-list-header">
         <h3>📍 Nearby Gyms</h3>
-        <span class="gym-count">{{ nearbyGyms.length > 0 ? nearbyGyms.length : enrichedGyms.length }}</span>
+        <span class="gym-count">{{ nearbyGyms.length }}</span>
       </div>
       <div class="gym-list">
-        <!-- Show real gyms from Places API if available -->
-        <template v-if="nearbyGyms.length > 0">
-          <div 
-            v-for="(gymData, index) in nearbyGyms" 
-            :key="gymData.place.place_id" 
-            class="gym-item real-gym"
-            :class="{ active: selectedGym?.id === gymData.place.place_id }"
-            @click="showRouteToRealGym(gymData)"
-          >
-            <div class="gym-rank">{{ index + 1 }}</div>
-            <div class="gym-info">
-              <h4>{{ gymData.name }}</h4>
-              <div class="gym-meta">
-                <span v-if="gymData.rating" class="rating">⭐ {{ gymData.rating.toFixed(1) }}</span>
-                <span v-if="gymData.distance" class="distance">📍 {{ gymData.distance }} km</span>
-              </div>
+        <!-- Show real gyms from Places API -->
+        <div 
+          v-for="(gymData, index) in nearbyGyms" 
+          :key="gymData.place.place_id" 
+          class="gym-item real-gym"
+          :class="{ active: selectedGym?.id === gymData.place.place_id }"
+          @click="showRouteToRealGym(gymData)"
+        >
+          <div class="gym-rank">{{ index + 1 }}</div>
+          <div class="gym-info">
+            <h4>{{ gymData.name }}</h4>
+            <div class="gym-meta">
+              <span v-if="gymData.rating" class="rating">⭐ {{ gymData.rating.toFixed(1) }}</span>
+              <span v-if="gymData.distance" class="distance">📍 {{ gymData.distance }} km</span>
             </div>
-            <div class="gym-action">→</div>
           </div>
-        </template>
-        <!-- Fallback: show static gyms if no real data -->
-        <template v-else>
-          <div 
-            v-for="(gym, index) in enrichedGyms" 
-            :key="gym.id" 
-            class="gym-item"
-            :class="{ active: selectedGym?.id === gym.id }"
-            @click="showRoute(gym)"
-          >
-            <div class="gym-rank">{{ index + 1 }}</div>
-            <div class="gym-info">
-              <h4>{{ gym.name }}</h4>
-              <div class="gym-meta">
-                <span>⭐ {{ gym.rating }}</span>
-                <span v-if="gym.distance">📍 {{ gym.distance }} km</span>
-              </div>
-            </div>
-            <div class="gym-action">→</div>
-          </div>
-        </template>
+          <div class="gym-action">→</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- No gyms found message -->
+    <div v-else-if="!searchingPlaces && !isLoading" class="no-gyms-message">
+      <div class="no-gyms-content">
+        <svg class="no-gyms-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+          <circle cx="12" cy="10" r="3"></circle>
+        </svg>
+        <h4>No gyms found in this area</h4>
+        <p>Try dragging the map to explore different areas</p>
       </div>
     </div>
   </div>
@@ -698,6 +710,74 @@ onMounted(() => {
   font-size: 14px;
   color: var(--green-700);
   font-weight: 500;
+}
+
+.map-center-info {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 8px 16px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.center-info-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.center-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+/* No gyms message */
+.no-gyms-message {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 16px 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  max-width: 280px;
+}
+
+.no-gyms-content {
+  text-align: center;
+}
+
+.no-gyms-icon {
+  width: 32px;
+  height: 32px;
+  color: #d1d5db;
+  margin-bottom: 8px;
+  stroke-width: 1.5;
+}
+
+.no-gyms-content h4 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-900);
+}
+
+.no-gyms-content p {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
 }
 
 .spinner-small {
