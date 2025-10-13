@@ -10,6 +10,10 @@ const props = defineProps({
   userLocation: {
     type: Object,
     default: null
+  },
+  selectedGym: {
+    type: Object,
+    default: null
   }
 })
 
@@ -520,6 +524,48 @@ window.showRouteToPlace = (placeId, lat, lng, name) => {
   })
 }
 
+// Show info window for selected gym
+const showGymInfoWindow = (marker, gym) => {
+  if (!infoWindow.value) return
+  
+  const content = `
+    <div style="padding: 12px; max-width: 280px;">
+      <h3 style="margin: 0 0 8px 0; color: #16a34a; font-size: 16px;">${gym.name}</h3>
+      ${gym.rating ? `
+        <div style="margin: 4px 0; color: #f59e0b; font-size: 14px;">
+          <strong>Rating:</strong> ⭐ ${gym.rating.toFixed(1)}/5
+        </div>
+      ` : ''}
+      ${gym.distance ? `
+        <div style="margin: 4px 0; color: #64748b; font-size: 14px;">
+          <strong>Distance:</strong> ${gym.distance} km
+        </div>
+      ` : ''}
+      ${gym.address ? `
+        <div style="margin: 4px 0; color: #64748b; font-size: 13px;">
+          📍 ${gym.address}
+        </div>
+      ` : ''}
+      <div style="margin-top: 12px; display: flex; gap: 8px;">
+        <button 
+          onclick="window.showRouteToPlace('${gym.id || gym.name}', ${gym.lat}, ${gym.lng}, '${gym.name.replace(/'/g, "\\'")}')"
+          style="flex: 1; background: #16a34a; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;"
+        >
+          Show Route
+        </button>
+        <a href="https://www.google.com/maps/dir/?api=1&destination=${gym.lat},${gym.lng}" 
+           target="_blank" rel="noopener"
+           style="flex: 1; background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; text-align: center; text-decoration: none; display: block;">
+          Directions
+        </a>
+      </div>
+    </div>
+  `
+  
+  infoWindow.value.setContent(content)
+  infoWindow.value.open(map.value, marker)
+}
+
 // This function is no longer needed as we only use real gym data from Places API
 
 // Watch for changes in user location
@@ -529,6 +575,62 @@ watch(() => props.userLocation, (newLocation) => {
     map.value.setCenter(newLocation)
     // Search for gyms around the new user location
     searchNearbyGyms(newLocation)
+  }
+}, { deep: true })
+
+// Watch for changes in selected gym
+watch(() => props.selectedGym, (newSelectedGym) => {
+  if (map.value && newSelectedGym) {
+    // Center map on selected gym
+    const gymPosition = { lat: newSelectedGym.lat, lng: newSelectedGym.lng }
+    map.value.setCenter(gymPosition)
+    map.value.setZoom(16) // Zoom in closer to show details
+    
+    // Find and highlight the corresponding marker
+    const targetMarker = markers.value.find(marker => {
+      const markerPos = marker.getPosition()
+      if (!markerPos) return false
+      
+      const latDiff = Math.abs(markerPos.lat() - newSelectedGym.lat)
+      const lngDiff = Math.abs(markerPos.lng() - newSelectedGym.lng)
+      
+      return latDiff < 0.0001 && lngDiff < 0.0001
+    })
+    
+    if (targetMarker) {
+      // Highlight the marker
+      markers.value.forEach(m => m.setAnimation(null))
+      targetMarker.setAnimation(google.maps.Animation.BOUNCE)
+      setTimeout(() => targetMarker.setAnimation(null), 2000)
+      
+      // Show info window for the selected gym
+      showGymInfoWindow(targetMarker, newSelectedGym)
+    } else {
+      // If no marker found, create a temporary marker and show info window
+      const tempMarker = new google.maps.Marker({
+        position: gymPosition,
+        map: map.value,
+        title: newSelectedGym.name,
+        icon: {
+          url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+        }
+      })
+      
+      // Add to markers array temporarily
+      markers.value.push(tempMarker)
+      
+      // Show info window immediately
+      showGymInfoWindow(tempMarker, newSelectedGym)
+      
+      // Remove temporary marker after showing info
+      setTimeout(() => {
+        tempMarker.setMap(null)
+        const index = markers.value.indexOf(tempMarker)
+        if (index > -1) {
+          markers.value.splice(index, 1)
+        }
+      }, 5000) // Keep marker for 5 seconds
+    }
   }
 }, { deep: true })
 

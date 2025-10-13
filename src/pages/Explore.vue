@@ -15,6 +15,23 @@ const showSuggestions = ref(false) // Show search suggestions
 const selectedSuggestionIndex = ref(-1) // For keyboard navigation
 const searchInputRef = ref(null)
 
+// Pagination and filtering state
+const currentPage = ref(1)
+const itemsPerPage = 10
+const sortField = ref('distance') // Default sort by distance
+const sortDirection = ref('asc') // 'asc' or 'desc'
+
+// Column search filters
+const columnFilters = ref({
+  name: '',
+  rating: '',
+  distance: '',
+  address: ''
+})
+
+// Selected gym for map view
+const selectedGymForMap = ref(null)
+
 const toggleView = (mode) => {
   viewMode.value = mode
 }
@@ -38,7 +55,78 @@ const enrichedGyms = computed(() => {
       gym.lat,
       gym.lng
     )
-  })).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
+  }))
+})
+
+// Filtered and sorted gyms
+const filteredGyms = computed(() => {
+  let filtered = enrichedGyms.value
+
+  // Apply column filters
+  if (columnFilters.value.name) {
+    filtered = filtered.filter(gym => 
+      gym.name.toLowerCase().includes(columnFilters.value.name.toLowerCase())
+    )
+  }
+  
+  if (columnFilters.value.rating) {
+    const ratingFilter = parseFloat(columnFilters.value.rating)
+    if (!isNaN(ratingFilter)) {
+      filtered = filtered.filter(gym => 
+        parseFloat(gym.rating) >= ratingFilter
+      )
+    }
+  }
+  
+  if (columnFilters.value.distance) {
+    const distanceFilter = parseFloat(columnFilters.value.distance)
+    if (!isNaN(distanceFilter)) {
+      filtered = filtered.filter(gym => 
+        parseFloat(gym.distance) <= distanceFilter
+      )
+    }
+  }
+  
+  if (columnFilters.value.address) {
+    filtered = filtered.filter(gym => 
+      gym.address && gym.address.toLowerCase().includes(columnFilters.value.address.toLowerCase())
+    )
+  }
+
+  // Apply sorting - create a new sorted array instead of modifying the original
+  const sorted = [...filtered].sort((a, b) => {
+    let aValue = a[sortField.value]
+    let bValue = b[sortField.value]
+    
+    // Handle numeric sorting for rating and distance
+    if (sortField.value === 'rating' || sortField.value === 'distance') {
+      aValue = parseFloat(aValue) || 0
+      bValue = parseFloat(bValue) || 0
+    } else {
+      aValue = String(aValue || '').toLowerCase()
+      bValue = String(bValue || '').toLowerCase()
+    }
+    
+    if (sortDirection.value === 'asc') {
+      return aValue > bValue ? 1 : aValue < bValue ? -1 : 0
+    } else {
+      return aValue < bValue ? 1 : aValue > bValue ? -1 : 0
+    }
+  })
+
+  return sorted
+})
+
+// Paginated gyms
+const paginatedGyms = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return filteredGyms.value.slice(start, end)
+})
+
+// Total pages
+const totalPages = computed(() => {
+  return Math.ceil(filteredGyms.value.length / itemsPerPage)
 })
 
 // Suggestions for autocomplete (show top 5 matches from real gyms only)
@@ -132,6 +220,64 @@ const clearSearch = () => {
   gyms.query = ''
   showSuggestions.value = false
   selectedSuggestionIndex.value = -1
+}
+
+// Sorting functions
+const sortBy = (field) => {
+  if (sortField.value === field) {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortField.value = field
+    sortDirection.value = 'asc'
+  }
+  currentPage.value = 1 // Reset to first page when sorting
+}
+
+// Pagination functions
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
+}
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
+}
+
+// Column filter functions
+const clearColumnFilter = (column) => {
+  columnFilters.value[column] = ''
+  currentPage.value = 1
+}
+
+const clearAllFilters = () => {
+  columnFilters.value = {
+    name: '',
+    rating: '',
+    distance: '',
+    address: ''
+  }
+  currentPage.value = 1
+}
+
+// Get sort icon for column headers
+const getSortIcon = (field) => {
+  if (sortField.value !== field) return '↕️'
+  return sortDirection.value === 'asc' ? '↑' : '↓'
+}
+
+// View gym on map
+const viewGymOnMap = (gym) => {
+  selectedGymForMap.value = gym
+  viewMode.value = 'map'
 }
 </script>
 
@@ -300,6 +446,7 @@ const clearSearch = () => {
           <GymMap 
             :gyms="gyms.filtered" 
             :user-location="gyms.location"
+            :selected-gym="selectedGymForMap"
             @places-found="handlePlacesFound"
           />
           <div class="map-info" v-if="gyms.location">
@@ -311,72 +458,207 @@ const clearSearch = () => {
         </div>
       </transition>
 
-      <!-- Grid View -->
+      <!-- List View -->
       <transition name="fade">
-        <div v-if="viewMode === 'grid'" class="grid-view">
-          <div v-if="enrichedGyms.length > 0" class="results-header">
-            <h2>{{ enrichedGyms.length }} gym{{ enrichedGyms.length !== 1 ? 's' : '' }} found</h2>
+        <div v-if="viewMode === 'grid'" class="list-view">
+          <div v-if="filteredGyms.length > 0" class="results-header">
+            <h2>{{ filteredGyms.length }} gym{{ filteredGyms.length !== 1 ? 's' : '' }} found</h2>
             <div class="results-meta">
               <span class="real-data-badge">🔵 Real data from Places API</span>
-              <span v-if="gyms.location" class="sort-indicator">Sorted by distance</span>
+              <span v-if="gyms.location" class="sort-indicator">Sorted by {{ sortField }} ({{ sortDirection }})</span>
             </div>
           </div>
-          <div v-if="enrichedGyms.length > 0" class="grid">
-            <Card 
-              variant="elevated" 
-              size="medium" 
-              v-for="g in enrichedGyms" 
-              :key="g.id" 
-              clickable 
-              hover
-              class="gym-card"
-            >
-          <template #header>
-                <div class="card-header">
-            <h3>{{ g.name }}</h3>
-                  <span class="rating-badge">⭐ {{ g.rating.toFixed(1) }}</span>
-                </div>
-          </template>
-              <div class="card-content">
-                <div class="info-row">
-                  <span class="label">Rating:</span>
-                  <span class="value">{{ g.rating.toFixed(1) }}/5</span>
-                </div>
-                <div class="info-row" v-if="g.distance">
-                  <span class="label">Distance:</span>
-                  <span class="value">{{ g.distance }} km away</span>
-                </div>
-                <div class="info-row" v-if="g.address">
-                  <span class="label">Address:</span>
-                  <span class="value address">{{ g.address }}</span>
-                </div>
+
+          <!-- Table with sorting and filtering -->
+          <div v-if="filteredGyms.length > 0" class="table-container">
+            <table class="gyms-table">
+              <thead>
+                <tr>
+                  <th class="sortable" @click="sortBy('name')">
+                    <div class="header-content">
+                      <span>Gym Name</span>
+                      <span class="sort-icon">{{ getSortIcon('name') }}</span>
+                    </div>
+                    <div class="filter-input">
+                      <input 
+                        v-model="columnFilters.name" 
+                        placeholder="Filter by name..."
+                        class="column-filter"
+                      />
+                      <button 
+                        v-if="columnFilters.name" 
+                        @click="clearColumnFilter('name')"
+                        class="clear-filter"
+                      >×</button>
+                    </div>
+                  </th>
+                  <th class="sortable" @click="sortBy('rating')">
+                    <div class="header-content">
+                      <span>Rating</span>
+                      <span class="sort-icon">{{ getSortIcon('rating') }}</span>
+                    </div>
+                    <div class="filter-input">
+                      <input 
+                        v-model="columnFilters.rating" 
+                        placeholder="Min rating..."
+                        type="number"
+                        min="0"
+                        max="5"
+                        step="0.1"
+                        class="column-filter"
+                      />
+                      <button 
+                        v-if="columnFilters.rating" 
+                        @click="clearColumnFilter('rating')"
+                        class="clear-filter"
+                      >×</button>
+                    </div>
+                  </th>
+                  <th class="sortable" @click="sortBy('distance')">
+                    <div class="header-content">
+                      <span>Distance</span>
+                      <span class="sort-icon">{{ getSortIcon('distance') }}</span>
+                    </div>
+                    <div class="filter-input">
+                      <input 
+                        v-model="columnFilters.distance" 
+                        placeholder="Max distance..."
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        class="column-filter"
+                      />
+                      <button 
+                        v-if="columnFilters.distance" 
+                        @click="clearColumnFilter('distance')"
+                        class="clear-filter"
+                      >×</button>
+                    </div>
+                  </th>
+                  <th class="sortable" @click="sortBy('address')">
+                    <div class="header-content">
+                      <span>Address</span>
+                      <span class="sort-icon">{{ getSortIcon('address') }}</span>
+                    </div>
+                    <div class="filter-input">
+                      <input 
+                        v-model="columnFilters.address" 
+                        placeholder="Filter by address..."
+                        class="column-filter"
+                      />
+                      <button 
+                        v-if="columnFilters.address" 
+                        @click="clearColumnFilter('address')"
+                        class="clear-filter"
+                      >×</button>
+                    </div>
+                  </th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="gym in paginatedGyms" :key="gym.id" class="gym-row">
+                  <td class="gym-name">
+                    <div class="name-content">
+                      <h4>{{ gym.name }}</h4>
+                    </div>
+                  </td>
+                  <td class="rating-cell">
+                    <div class="rating-content">
+                      <span class="rating-value">{{ gym.rating.toFixed(1) }}/5</span>
+                      <div class="stars">⭐</div>
+                    </div>
+                  </td>
+                  <td class="distance-cell">
+                    <span class="distance-value">{{ gym.distance }} km</span>
+                  </td>
+                  <td class="address-cell">
+                    <span class="address-value">{{ gym.address }}</span>
+                  </td>
+                  <td class="actions-cell">
+                    <div class="action-buttons">
+                      <a 
+                        :href="`https://www.google.com/maps/dir/?api=1&destination=${gym.lat},${gym.lng}`" 
+                        target="_blank" 
+                        rel="noopener"
+                        class="action-btn primary"
+                      >
+                        Directions
+                      </a>
+                      <button 
+                        @click="viewGymOnMap(gym)"
+                        class="action-btn secondary"
+                      >
+                        View Map
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Pagination -->
+            <div class="pagination-container">
+              <div class="pagination-info">
+                <span>Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to {{ Math.min(currentPage * itemsPerPage, filteredGyms.length) }} of {{ filteredGyms.length }} results</span>
+                <button 
+                  v-if="Object.values(columnFilters).some(filter => filter)"
+                  @click="clearAllFilters"
+                  class="clear-all-filters"
+                >
+                  Clear all filters
+                </button>
               </div>
-          <template #footer>
-                <div class="card-actions">
-                  <a 
-                    :href="`https://www.google.com/maps/dir/?api=1&destination=${g.lat},${g.lng}`" 
-                    target="_blank" 
-                    rel="noopener"
-                    class="action-link primary"
-                  >
-                    Get Directions →
-                  </a>
+              
+              <div class="pagination-controls">
+                <button 
+                  @click="prevPage" 
+                  :disabled="currentPage === 1"
+                  class="pagination-btn"
+                >
+                  ← Previous
+                </button>
+                
+                <div class="page-numbers">
                   <button 
-                    @click="() => { viewMode = 'map' }"
-                    class="action-link secondary"
+                    v-for="page in Math.min(5, totalPages)" 
+                    :key="page"
+                    @click="goToPage(page)"
+                    :class="{ active: page === currentPage }"
+                    class="page-btn"
                   >
-                    View on Map
+                    {{ page }}
+                  </button>
+                  <span v-if="totalPages > 5" class="page-ellipsis">...</span>
+                  <button 
+                    v-if="totalPages > 5"
+                    @click="goToPage(totalPages)"
+                    :class="{ active: currentPage === totalPages }"
+                    class="page-btn"
+                  >
+                    {{ totalPages }}
                   </button>
                 </div>
-          </template>
-        </Card>
+                
+                <button 
+                  @click="nextPage" 
+                  :disabled="currentPage === totalPages"
+                  class="pagination-btn"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
           </div>
           
-          <!-- No gyms found in grid view -->
+          <!-- No gyms found in list view -->
           <div v-else class="empty-state">
             <div class="empty-icon">🏋️</div>
             <h3>No gyms found</h3>
-            <p>Try dragging the map to explore different areas or enable location services</p>
+            <p>Try adjusting your filters or enable location services</p>
+            <button v-if="Object.values(columnFilters).some(filter => filter)" @click="clearAllFilters" class="clear-filters-btn">
+              Clear all filters
+            </button>
           </div>
         </div>
       </transition>
@@ -833,10 +1115,320 @@ const clearSearch = () => {
   color: #92400e;
 }
 
-/* Grid View */
-.grid-view {
+/* List View */
+.list-view {
   animation: fadeIn 0.3s ease;
 }
+
+/* Table Styles */
+.table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.gyms-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.gyms-table thead {
+  background: var(--green-50);
+  border-bottom: 2px solid var(--green-200);
+}
+
+.gyms-table th {
+  padding: 16px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--green-700);
+  position: relative;
+}
+
+.gyms-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.gyms-table th.sortable:hover {
+  background: var(--green-100);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.sort-icon {
+  font-size: 16px;
+  color: var(--green-600);
+  margin-left: 8px;
+}
+
+.filter-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.column-filter {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 12px;
+  background: white;
+  transition: border-color 0.2s ease;
+}
+
+.column-filter:focus {
+  outline: none;
+  border-color: var(--green-500);
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.1);
+}
+
+.clear-filter {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #f3f4f6;
+  border: none;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  color: #6b7280;
+  transition: all 0.2s ease;
+}
+
+.clear-filter:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.gyms-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s ease;
+}
+
+.gyms-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.gyms-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.gyms-table td {
+  padding: 12px;
+  vertical-align: top;
+}
+
+.gym-name h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--green-700);
+  line-height: 1.3;
+}
+
+.rating-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rating-value {
+  font-weight: 600;
+  color: var(--text-900);
+}
+
+.stars {
+  font-size: 14px;
+}
+
+.distance-value {
+  font-weight: 600;
+  color: var(--green-600);
+}
+
+.address-value {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.action-btn.primary {
+  background: var(--green-600);
+  color: white;
+}
+
+.action-btn.primary:hover {
+  background: var(--green-700);
+  transform: translateY(-1px);
+}
+
+.action-btn.secondary {
+  background: var(--green-50);
+  color: var(--green-700);
+  border: 1px solid var(--green-200);
+}
+
+.action-btn.secondary:hover {
+  background: var(--green-100);
+  border-color: var(--green-300);
+}
+
+/* Pagination Styles */
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.pagination-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.clear-all-filters {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #f59e0b;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-all-filters:hover {
+  background: #fde68a;
+  border-color: #d97706;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-btn {
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #374151;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--green-50);
+  border-color: var(--green-300);
+  color: var(--green-700);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-numbers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.page-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 6px;
+  color: #374151;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-btn:hover {
+  background: var(--green-50);
+  border-color: var(--green-300);
+  color: var(--green-700);
+}
+
+.page-btn.active {
+  background: var(--green-600);
+  border-color: var(--green-600);
+  color: white;
+}
+
+.page-ellipsis {
+  padding: 0 8px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.clear-filters-btn {
+  background: var(--green-600);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: all 0.2s ease;
+}
+
+.clear-filters-btn:hover {
+  background: var(--green-700);
+  transform: translateY(-1px);
+}
+
 
 .results-header {
   display: flex;
@@ -1101,6 +1693,46 @@ const clearSearch = () => {
   
   .action-link {
     width: 100%;
+  }
+  
+  /* Table responsive styles */
+  .table-container {
+    overflow-x: auto;
+  }
+  
+  .gyms-table {
+    min-width: 600px;
+  }
+  
+  .gyms-table th,
+  .gyms-table td {
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .action-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  
+  .pagination-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .pagination-controls {
+    justify-content: center;
+  }
+  
+  .page-numbers {
+    flex-wrap: wrap;
+    justify-content: center;
   }
 }
 </style>

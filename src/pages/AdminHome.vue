@@ -9,13 +9,59 @@ function handleLogout() {
   logout()
   router.push('/')
 }
+
+// Dashboard menu items
+const menuItems = [
+  {
+    title: 'Users',
+    description: 'Manage user accounts and permissions',
+    route: '/admin/users',
+    icon: '👥',
+    color: '#3b82f6'
+  },
+  {
+    title: 'Courses',
+    description: 'Manage courses and learning materials',
+    route: '/admin/courses',
+    icon: '📚',
+    color: '#8b5cf6'
+  },
+  {
+    title: 'Posts',
+    description: 'Manage forum posts and discussions',
+    route: '/admin/posts',
+    icon: '📝',
+    color: '#ec4899'
+  },
+  {
+    title: 'Bookings',
+    description: 'View and manage user bookings',
+    route: '/admin/bookings',
+    icon: '📅',
+    color: '#f59e0b'
+  },
+  {
+    title: 'Email Centre',
+    description: 'Send emails and manage templates',
+    route: '/admin/email-centre',
+    icon: '✉️',
+    color: '#10b981'
+  },
+  {
+    title: 'System/Settings',
+    description: 'Configure system settings',
+    route: '/admin/system-settings',
+    icon: '⚙️',
+    color: '#6366f1'
+  }
+]
 </script>
 
 <template>
   <div class="admin">
     <header class="admin__bar">
       <div class="container admin__bar-inner">
-        <router-link to="/admin" class="logo">ADMIN MANAGE SYSTEM</router-link>
+        <router-link to="/admin" class="logo">ADMIN DASHBOARD</router-link>
         <div class="admin__actions">
           <Button variant="secondary" size="medium" @click="handleLogout">Log out</Button>
           <div class="chip">
@@ -27,115 +73,220 @@ function handleLogout() {
     </header>
 
     <main class="container admin__content">
-      <h1 class="greeting">Welcome, Administrator!</h1>
+      <div class="header-section">
+        <h1 class="greeting">Welcome, Administrator</h1>
+        <p class="subtitle">Manage your platform from the dashboard below</p>
+      </div>
 
-      <div class="grid">
-        <section class="panel panel--menu">
-          <h3>Manage Dashboard</h3>
-          <ul>
-            <li><router-link to="/admin/users">Users</router-link></li>
-            <li><router-link to="/admin/courses">Courses</router-link></li>
-            <li><router-link to="/admin/posts">Posts</router-link></li>
-            <li><router-link to="/admin/bookings">Bookings</router-link></li>
-            <li><router-link to="/admin/email-centre">Email Centre</router-link></li>
-            <li><router-link to="/admin/maps-poi">Maps/POI</router-link></li>
-            <li><router-link to="/admin/tables">Tables</router-link></li>
-            <li><router-link to="/admin/system-settings">System/Settings</router-link></li>
-            <li><router-link to="/admin/audit-logs">Audit Logs</router-link></li>
-          </ul>
-        </section>
-
-        <section class="panel stat">
-          <h3>DAU/WAU</h3>
-          <div class="placeholder"></div>
-        </section>
-
-        <section class="panel stat">
-          <h3>New registrations</h3>
-          <div class="bars">
-            <div class="bar" style="height:30%"></div>
-            <div class="bar" style="height:60%"></div>
-            <div class="bar" style="height:40%"></div>
-            <div class="bar" style="height:80%"></div>
-            <div class="bar" style="height:55%"></div>
-            <div class="bar" style="height:65%"></div>
-            <div class="bar" style="height:25%"></div>
+      <div class="dashboard-grid">
+        <router-link 
+          v-for="item in menuItems" 
+          :key="item.route"
+          :to="item.route"
+          class="dashboard-card"
+          :style="{ '--card-color': item.color }"
+        >
+          <div class="card-icon">{{ item.icon }}</div>
+          <div class="card-content">
+            <h3 class="card-title">{{ item.title }}</h3>
+            <p class="card-description">{{ item.description }}</p>
           </div>
-        </section>
-
-        <section class="panel stat pie">
-          <h3>Course completion rate</h3>
-          <div class="pie__wrap">
-            <div class="pie__chart"></div>
-            <div class="pie__value">32%</div>
-          </div>
-        </section>
-
-        <section class="panel stat">
-          <h3>Average course rating</h3>
-          <div class="placeholder"></div>
-        </section>
-
-        <section class="panel">
-          <h3>Choose data from</h3>
-          <div class="date-placeholder">XXXX/XX/XX - XXXX/XX/XX</div>
-        </section>
-
-        <section class="panel"><h3>XXXX</h3><div class="placeholder"></div></section>
-        <section class="panel"><h3>XXXX</h3><div class="placeholder"></div></section>
+          <div class="card-arrow">→</div>
+        </router-link>
       </div>
     </main>
   </div>
 </template>
 
 <style scoped>
-:root {
-  --green-700: #15803d;
-  --green-600: #16a34a;
-  --green-50: #f0fdf4;
-  --border: #e2e8f0;
-  --muted: #64748b;
+.container { 
+  max-width: 1200px; 
+  margin: 0 auto; 
+  padding: 0 24px; 
 }
-.container { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
 
-.admin__bar { background: #fff; border-bottom: 1px solid var(--gray-200); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(6px); }
-.admin__bar-inner { height: 64px; display: flex; align-items: center; justify-content: space-between; }
+.admin__bar { 
+  background: #fff; 
+  border-bottom: 1px solid #e5e7eb; 
+  position: sticky; 
+  top: 0; 
+  z-index: 10; 
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.admin__bar-inner { 
+  height: 70px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+}
+
 .logo { 
   font-weight: 800; 
-  color: var(--green-800); 
+  font-size: 1.25rem;
+  color: #059669; 
   text-decoration: none;
   cursor: pointer;
+  letter-spacing: 0.5px;
 }
+
 .logo:hover { 
-  color: var(--green-600); 
+  color: #10b981; 
   text-decoration: none;
 }
-.admin__actions { display: flex; align-items: center; gap: 12px; }
 
-/* Legacy button styles removed - now using Button component */
-.chip { display: inline-flex; align-items: center; gap: 8px; background: var(--green-50); color: var(--green-800); border: 1px solid var(--green-200); padding: 6px 10px; border-radius: 999px; box-shadow: var(--shadow-sm); }
-.chip__avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--green-600); color: white; display: grid; place-content: center; font-weight: 700; }
+.admin__actions { 
+  display: flex; 
+  align-items: center; 
+  gap: 16px; 
+}
 
-.admin__content { padding: 24px 0 40px; }
-.greeting { margin: 0 0 16px 0; }
+.chip { 
+  display: inline-flex; 
+  align-items: center; 
+  gap: 8px; 
+  background: #f0fdf4; 
+  color: #059669; 
+  border: 1px solid #bbf7d0; 
+  padding: 8px 14px; 
+  border-radius: 999px; 
+  font-weight: 600;
+  font-size: 0.875rem;
+}
 
-.grid { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 18px; }
-.panel { background: #fff; border: 1px solid var(--green-100); border-radius: 12px; padding: 16px; box-shadow: var(--shadow-md); }
-.panel h3 { margin: 0 0 10px 0; }
-.panel--menu ul { margin: 0; padding-left: 20px; color: var(--muted); }
-.panel--menu a { color: var(--green-700); text-decoration: none; }
-.panel--menu a:hover { text-decoration: underline; }
+.chip__avatar { 
+  width: 26px; 
+  height: 26px; 
+  border-radius: 50%; 
+  background: #10b981; 
+  color: white; 
+  display: grid; 
+  place-content: center; 
+  font-weight: 700; 
+  font-size: 0.875rem;
+}
 
-.stat .placeholder { height: 140px; background: #eef2f7; border-radius: 10px; }
-.bars { display: grid; grid-auto-flow: column; align-items: end; gap: 8px; height: 140px; padding: 8px; background: #eef2f7; border-radius: 10px; }
-.bar { width: 20px; background: var(--green-600); border-radius: 6px 6px 0 0; opacity: .8; }
+.admin__content { 
+  padding: 48px 0 80px; 
+}
 
-.pie__wrap { display: grid; grid-template-columns: 120px 1fr; align-items: center; gap: 12px; }
-.pie__chart { width: 120px; height: 120px; border-radius: 50%; background: conic-gradient(var(--green-600) 0 32%, #d1fae5 32% 100%); border: 6px solid white; box-shadow: inset 0 0 0 1px var(--border); }
-.pie__value { font-size: 24px; color: var(--green-700); font-weight: 700; }
+.header-section {
+  margin-bottom: 40px;
+  text-align: center;
+}
 
-@media (max-width: 900px) {
-  .grid { grid-template-columns: 1fr; }
+.greeting { 
+  margin: 0 0 8px 0; 
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 1.125rem;
+  color: #6b7280;
+}
+
+.dashboard-grid { 
+  display: grid; 
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); 
+  gap: 24px;
+}
+
+.dashboard-card {
+  background: #fff;
+  border: 2px solid #f3f4f6;
+  border-radius: 16px;
+  padding: 28px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--card-color);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.dashboard-card:hover {
+  border-color: var(--card-color);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.dashboard-card:hover::before {
+  opacity: 1;
+}
+
+.card-icon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+  filter: grayscale(0.3);
+  transition: filter 0.2s ease;
+}
+
+.dashboard-card:hover .card-icon {
+  filter: grayscale(0);
+}
+
+.card-content {
+  flex: 1;
+}
+
+.card-title {
+  margin: 0 0 6px 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.card-description {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.card-arrow {
+  font-size: 1.5rem;
+  color: #d1d5db;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.dashboard-card:hover .card-arrow {
+  color: var(--card-color);
+  transform: translateX(4px);
+}
+
+@media (max-width: 768px) {
+  .greeting {
+    font-size: 1.75rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .dashboard-grid { 
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-card {
+    padding: 24px;
+  }
 }
 </style>
 

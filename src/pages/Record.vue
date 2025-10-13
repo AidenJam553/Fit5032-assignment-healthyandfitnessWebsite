@@ -1,11 +1,25 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import SiteHeader from '@/components/SiteHeader.vue'
+import FoodAnalyzer from '@/components/FoodAnalyzer.vue'
 import { getCurrentUser } from '@/lib/auth.js'
 import { useLessonsStore } from '@/lib/stores/lessons.js'
 
 const currentUser = ref(null)
 const lessons = useLessonsStore()
+const latestFoodAnalysis = ref(null)
+
+// Handle food analysis completion
+function handleAnalysisComplete(analysisData) {
+  latestFoodAnalysis.value = analysisData
+  console.log('Food analysis completed:', analysisData)
+  
+  // You can save this to the backend or update user's daily calorie intake
+  // For example:
+  // - Add to daily meal log
+  // - Update total calories for the day
+  // - Update macro nutrient tracking
+}
 
 // Get user's wishlist courses
 const userWishlistLessons = computed(() => {
@@ -160,6 +174,11 @@ onMounted(() => {
             </div>
           </div>
         </div>
+
+        <!-- AI Food Analyzer -->
+        <div class="panel food-analyzer-panel">
+          <FoodAnalyzer @analysis-complete="handleAnalysisComplete" />
+        </div>
       </section>
     </div>
   </div>
@@ -183,6 +202,7 @@ onMounted(() => {
 .recipe { grid-column: span 6; }
 .calories { grid-column: span 6; }
 .schedule { grid-column: span 12; }
+.food-analyzer-panel { grid-column: span 12; padding: 0; }
 
 .avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--green-200); display: grid; place-content: center; font-weight: 700; }
 .profile__row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
@@ -241,13 +261,13 @@ onMounted(() => {
   .kpis { grid-template-columns: 1fr 1fr 1fr; }
   .profile, .weight, .learning { grid-column: span 6; }
   .recipe, .calories { grid-column: span 6; }
-  .schedule { grid-column: span 12; }
+  .schedule, .food-analyzer-panel { grid-column: span 12; }
 }
 
 @media (max-width: 700px) {
   .kpis { grid-template-columns: 1fr; }
   .grid { grid-template-columns: 1fr; }
-  .profile, .weight, .learning, .recipe, .calories, .schedule { grid-column: span 1; }
+  .profile, .weight, .learning, .recipe, .calories, .schedule, .food-analyzer-panel { grid-column: span 1; }
 }
 </style>
 

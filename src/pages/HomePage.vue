@@ -3,18 +3,72 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import SiteHeader from '@/components/SiteHeader.vue'
 import Card from '@/components/Card.vue'
 import Button from '@/components/Button.vue'
+import MiniMap from '@/components/MiniMap.vue'
 import { getCurrentUser } from '@/lib/auth'
+import { useLessonsStore } from '@/lib/stores/lessons'
+import { useGymsStore } from '@/lib/stores/gyms'
+import { useRouter } from 'vue-router'
 
 const overlayOpacity = ref(0)
 const isLoaded = ref(false)
 const animatedElements = ref([])
 const user = ref(null)
+const lessonsStore = useLessonsStore()
+const gymsStore = useGymsStore()
+const router = useRouter()
+const nearbyGyms = ref([])
+const loadingGyms = ref(false)
+const placesService = ref(null)
 
 // Check if user is logged in
 const isLoggedIn = computed(() => !!user.value)
 
+// Get top 3 nearest gyms
+const top3NearestGyms = computed(() => {
+  return nearbyGyms.value.slice(0, 3)
+})
+
+// Google Maps API Key
+const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY_HERE'
+
+// Get top 3 courses by rating
+const topRatedCourses = computed(() => {
+  const courses = lessonsStore.courses || []
+  
+  if (courses.length === 0) {
+    return []
+  }
+  
+  // Create array with courses and their ratings
+  const coursesWithRatings = courses.map(course => ({
+    ...course,
+    avgRating: lessonsStore.averageRating(course.id) || 0,
+    ratingCount: lessonsStore.ratingCount(course.id) || 0
+  }))
+  
+  // Sort by average rating (desc), then by rating count (desc)
+  // If no ratings yet, sort by creation order
+  const sorted = coursesWithRatings.sort((a, b) => {
+    // If both have ratings, sort by rating
+    if (b.avgRating !== a.avgRating) {
+      return b.avgRating - a.avgRating
+    }
+    if (b.ratingCount !== a.ratingCount) {
+      return b.ratingCount - a.ratingCount
+    }
+    // Fallback to original order if no ratings
+    return 0
+  })
+  
+  // Return top 3
+  return sorted.slice(0, 3)
+})
+
 function updateUser() {
   user.value = getCurrentUser()
+  if (user.value) {
+    lessonsStore.setCurrentUser(user.value)
+  }
 }
 
 function updateOpacity() {
@@ -42,13 +96,170 @@ function observeElements() {
   })
 }
 
-onMounted(() => {
+function getDifficultyColor(difficulty) {
+  const colors = {
+    'Beginner': 'beginner',
+    'Intermediate': 'intermediate',
+    'Advanced': 'advanced'
+  }
+  return colors[difficulty] || 'beginner'
+}
+
+function goToCourse(courseId) {
+  router.push({ name: 'lesson-detail', params: { id: courseId } })
+}
+
+// Handle gyms found from map
+function handleGymsFound(gyms) {
+  // Sort by distance and store
+  if (gymsStore.location) {
+    const gymsWithDistance = gyms.map(gym => ({
+      ...gym,
+      distance: calculateDistance(
+        gymsStore.location.lat,
+        gymsStore.location.lng,
+        gym.lat,
+        gym.lng
+      )
+    }))
+    nearbyGyms.value = gymsWithDistance.sort((a, b) => 
+      parseFloat(a.distance) - parseFloat(b.distance)
+    )
+  } else {
+    nearbyGyms.value = gyms
+  }
+}
+
+// Calculate distance between two coordinates
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371 // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+  return (R * c).toFixed(2)
+}
+
+// Load Google Maps API
+const loadGoogleMapsAPI = () => {
+  return new Promise((resolve, reject) => {
+    if (window.google && window.google.maps && window.google.maps.Map) {
+      resolve()
+      return
+    }
+
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]')
+    if (existingScript) {
+      existingScript.addEventListener('load', () => {
+        setTimeout(() => {
+          if (window.google && window.google.maps && window.google.maps.Map) {
+            resolve()
+          } else {
+            reject(new Error('Google Maps API loaded but not initialized'))
+          }
+        }, 100)
+      })
+      existingScript.addEventListener('error', () => {
+        reject(new Error('Failed to load Google Maps API'))
+      })
+      return
+    }
+
+    const callbackName = 'initGoogleMapsCallback_' + Date.now()
+    window[callbackName] = () => {
+      delete window[callbackName]
+      resolve()
+    }
+
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&callback=${callbackName}`
+    script.async = true
+    script.defer = true
+    script.onerror = () => {
+      delete window[callbackName]
+      reject(new Error('Failed to load Google Maps API'))
+    }
+    document.head.appendChild(script)
+  })
+}
+
+// Search for nearby gyms using Places API
+async function searchNearbyGyms(location) {
+  if (!location) return
+
+  loadingGyms.value = true
+  
+  try {
+    await loadGoogleMapsAPI()
+    
+    // Create a temporary div for the PlacesService
+    if (!placesService.value) {
+      const div = document.createElement('div')
+      placesService.value = new google.maps.places.PlacesService(div)
+    }
+
+    const request = {
+      location: new google.maps.LatLng(location.lat, location.lng),
+      radius: 5000, // 5km radius
+      type: 'gym',
+      keyword: 'fitness gym'
+    }
+
+    placesService.value.nearbySearch(request, (results, status) => {
+      loadingGyms.value = false
+      
+      if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+        console.log('Found real gyms from Places API:', results.length)
+        
+        // Process and sort gyms by distance
+        const gymsWithDistance = results.map(place => {
+          const distance = calculateDistance(
+            location.lat,
+            location.lng,
+            place.geometry.location.lat(),
+            place.geometry.location.lng()
+          )
+          
+          return {
+            id: place.place_id,
+            name: place.name,
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+            rating: place.rating || 0,
+            address: place.vicinity,
+            distance: distance,
+            isRealPlace: true
+          }
+        })
+        
+        // Sort by distance and take top results
+        nearbyGyms.value = gymsWithDistance.sort((a, b) => 
+          parseFloat(a.distance) - parseFloat(b.distance)
+        )
+        
+        console.log('Top 3 nearest gyms:', nearbyGyms.value.slice(0, 3))
+      } else {
+        console.warn('Places API search failed:', status)
+        nearbyGyms.value = []
+      }
+    })
+  } catch (error) {
+    console.error('Error searching for gyms:', error)
+    loadingGyms.value = false
+    nearbyGyms.value = []
+  }
+}
+
+onMounted(async () => {
   updateUser()
   updateOpacity()
   window.addEventListener('scroll', updateOpacity, { passive: true })
   window.addEventListener('storage', updateUser)
   
-  // Trigger initial hero animation
+  // Trigger initial hero animation immediately
   setTimeout(() => {
     isLoaded.value = true
   }, 100)
@@ -57,11 +268,38 @@ onMounted(() => {
   setTimeout(() => {
     observeElements()
   }, 300)
+  
+  // Load data in parallel for better performance
+  Promise.all([
+    // Load courses (fast)
+    lessonsStore.initializeCourses().then(async () => {
+      // Load ratings for top courses in parallel (not all courses)
+      const courses = lessonsStore.courses || []
+      if (courses.length > 0) {
+        // Only load ratings for the first 10 courses in parallel
+        // This is enough to find top 3 rated courses
+        const topCourses = courses.slice(0, 10)
+        await Promise.all(
+          topCourses.map(course => lessonsStore.loadCourseRatings(course.id))
+        )
+      }
+    }),
+    
+    // Load gym data in parallel (independent operation)
+    gymsStore.locate().then(async (locationSuccess) => {
+      if (locationSuccess && gymsStore.location) {
+        await searchNearbyGyms(gymsStore.location)
+      }
+    })
+  ]).catch(error => {
+    console.error('Error loading homepage data:', error)
+  })
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('scroll', updateOpacity)
   window.removeEventListener('storage', updateUser)
+  lessonsStore.stopRealtimeListeners()
 })
 </script>
 
@@ -93,19 +331,54 @@ onBeforeUnmount(() => {
     <main class="container content">
       <section class="section courses animate-on-scroll">
         <div class="section__header">
-          <h2 class="section__title">Courses</h2>
-          <a class="section__more" href="#">View more &gt;&gt;</a>
+          <h2 class="section__title">Top Rated Courses</h2>
+          <router-link class="section__more" to="/learn">View more &gt;&gt;</router-link>
         </div>
         <div class="card-grid">
-          <Card variant="elevated" size="large" class="stagger-1" clickable hover>
-            <div class="card-placeholder" aria-label="Course placeholder"></div>
-          </Card>
-          <Card variant="elevated" size="large" class="stagger-2" clickable hover>
-            <div class="card-placeholder" aria-label="Course placeholder"></div>
-          </Card>
-          <Card variant="elevated" size="large" class="stagger-3" clickable hover>
-            <div class="card-placeholder" aria-label="Course placeholder"></div>
-          </Card>
+          <!-- Show placeholder only if loading and no courses -->
+          <template v-if="lessonsStore.loading && topRatedCourses.length === 0">
+            <Card variant="elevated" size="large" class="stagger-1">
+              <div class="card-placeholder loading-shimmer" aria-label="Course placeholder"></div>
+            </Card>
+            <Card variant="elevated" size="large" class="stagger-2">
+              <div class="card-placeholder loading-shimmer" aria-label="Course placeholder"></div>
+            </Card>
+            <Card variant="elevated" size="large" class="stagger-3">
+              <div class="card-placeholder loading-shimmer" aria-label="Course placeholder"></div>
+            </Card>
+          </template>
+          
+          <!-- Show actual courses -->
+          <template v-else>
+            <Card 
+              v-for="(course, index) in topRatedCourses" 
+              :key="course.id"
+              variant="elevated" 
+              size="large" 
+              :class="`stagger-${index + 1}`" 
+              clickable 
+              hover
+              @click="goToCourse(course.id)"
+            >
+              <div class="course-card">
+                <div class="course-header" :class="`difficulty-${getDifficultyColor(course.difficulty)}`">
+                  <div class="course-badge">{{ course.difficulty }}</div>
+                  <div class="course-duration">{{ course.minutes }}m</div>
+                </div>
+                <div class="course-content">
+                  <div class="course-topic-badge">{{ course.topic }}</div>
+                  <h3 class="course-title">{{ course.title }}</h3>
+                  <div class="course-rating">
+                    <div class="stars">
+                      <span v-for="i in 5" :key="i" class="star" :class="{ 'filled': i <= course.avgRating }">★</span>
+                    </div>
+                    <span class="rating-text">{{ course.avgRating.toFixed(1) }}</span>
+                    <span class="rating-count">({{ course.ratingCount }})</span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </template>
         </div>
       </section>
 
@@ -123,22 +396,70 @@ onBeforeUnmount(() => {
           </ul>
         </Card>
 
-        <Card variant="default" size="medium" class="explore stagger-2" clickable hover>
+        <Card variant="default" size="medium" class="explore stagger-2">
           <template #header>
-            <h3 class="panel__title">Explore</h3>
-          </template>
-          <div class="explore__grid">
-            <div class="map-card">
-              <div class="map-card__icon">🗺️</div>
-              <Button variant="secondary" size="medium" tag="router-link" to="/explore">Find a gym &gt;</Button>
+            <div class="panel__header">
+              <h3 class="panel__title">Find a Gym</h3>
+              <router-link to="/explore" class="panel__link">View all &gt;</router-link>
             </div>
-            <ul class="list-placeholder">
-              <li></li>
-              <li></li>
-              <li></li>
-              <li></li>
-              <li></li>
-            </ul>
+          </template>
+          <div class="explore__content">
+            <!-- Mini Map Section -->
+            <div class="mini-map-section">
+              <MiniMap 
+                :location="gymsStore.location" 
+                :gyms="nearbyGyms"
+                height="200px"
+                @click="router.push('/explore')"
+              />
+            </div>
+            
+            <!-- Nearby Gyms List -->
+            <div class="nearby-gyms">
+              <div class="gyms-header">
+                <h4>Nearby Gyms</h4>
+                <span v-if="top3NearestGyms.length > 0" class="gyms-count">{{ top3NearestGyms.length }}</span>
+              </div>
+              
+              <!-- Loading State -->
+              <div v-if="loadingGyms" class="gyms-loading">
+                <div class="spinner-mini"></div>
+                <p>Searching nearby gyms...</p>
+              </div>
+              
+              <!-- Gyms List -->
+              <div v-else-if="top3NearestGyms.length > 0" class="gyms-list">
+                <div 
+                  v-for="(gym, index) in top3NearestGyms" 
+                  :key="gym.id"
+                  class="gym-item-mini"
+                  @click="router.push('/explore')"
+                >
+                  <div class="gym-rank-mini">{{ index + 1 }}</div>
+                  <div class="gym-info-mini">
+                    <h5>{{ gym.name }}</h5>
+                    <div class="gym-meta-mini">
+                      <span v-if="gym.rating" class="gym-rating">⭐ {{ gym.rating.toFixed(1) }}</span>
+                      <span v-if="gym.distance" class="gym-distance">📍 {{ gym.distance }} km</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Empty State -->
+              <div v-else class="no-gyms-mini">
+                <div class="no-gyms-icon">🏋️</div>
+                <p v-if="!gymsStore.location">Enable location to find nearby gyms</p>
+                <p v-else>No gyms found nearby</p>
+                <button 
+                  v-if="!gymsStore.location"
+                  @click="gymsStore.locate().then(loc => loc && searchNearbyGyms(gymsStore.location))"
+                  class="retry-btn"
+                >
+                  Enable Location
+                </button>
+              </div>
+            </div>
           </div>
         </Card>
       </section>
@@ -330,6 +651,149 @@ onBeforeUnmount(() => {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.card-placeholder.loading-shimmer {
+  background: linear-gradient(90deg, 
+    var(--green-100) 0%, 
+    var(--green-200) 50%, 
+    var(--green-100) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Course Card Styles */
+.course-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.course-header {
+  height: 100px;
+  position: relative;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: -16px -16px 0 -16px;
+}
+
+.course-header.difficulty-beginner {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.course-header.difficulty-intermediate {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.course-header.difficulty-advanced {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.course-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.course-duration {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+}
+
+.course-content {
+  padding: 16px 0 0 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.course-topic-badge {
+  display: inline-block;
+  background: var(--green-100);
+  color: var(--green-700);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+  align-self: flex-start;
+}
+
+.course-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-900);
+  margin: 0 0 12px 0;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.course-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--green-100);
+}
+
+.stars {
+  display: flex;
+  gap: 2px;
+}
+
+.star {
+  color: #d1d5db;
+  font-size: 14px;
+  transition: color 0.2s ease;
+}
+
+.star.filled {
+  color: #fbbf24;
+}
+
+.rating-text {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-900);
+  margin-left: 2px;
+}
+
+.rating-count {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -341,43 +805,207 @@ onBeforeUnmount(() => {
 .list-placeholder { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .list-placeholder li { height: 12px; background: var(--green-100); border-radius: 6px; }
 
-.explore__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.map-card { 
-  background: #eafff1; 
-  border: 1px dashed var(--green-600); 
-  border-radius: 12px; 
-  padding: 24px; 
-  display: grid; 
-  place-content: center; 
-  gap: 12px; 
-  text-align: center; 
-  box-shadow: 0 3px 10px rgba(0,0,0,0.06); 
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.map-card:hover {
-  transform: scale(1.02);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-  background: #e0fceb;
-}
-
-.map-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
+.panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-  transition: left 0.8s ease;
 }
 
-.map-card:hover::before {
-  left: 100%;
+.panel__link {
+  color: var(--green-700);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: color 0.2s;
 }
-.map-card__icon { font-size: 40px; }
+
+.panel__link:hover {
+  color: var(--green-600);
+  text-decoration: underline;
+}
+
+.explore__content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+}
+
+/* Mini Map Styles */
+.mini-map-section {
+  min-height: 200px;
+}
+
+/* Nearby Gyms Styles */
+.nearby-gyms {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gyms-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--green-100);
+}
+
+.gyms-header h4 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-900);
+}
+
+.gyms-count {
+  background: var(--green-600);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.gyms-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gym-item-mini {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--green-50);
+  border-radius: 8px;
+  border: 1px solid var(--green-100);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.gym-item-mini:hover {
+  background: var(--green-100);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.gym-rank-mini {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: var(--green-600);
+  color: white;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.gym-info-mini {
+  flex: 1;
+  min-width: 0;
+}
+
+.gym-info-mini h5 {
+  margin: 0 0 3px 0;
+  font-size: 0.8rem;
+  color: var(--text-900);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.gym-meta-mini {
+  display: flex;
+  gap: 6px;
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+
+.gym-rating {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.gym-distance {
+  color: var(--green-700);
+  font-weight: 600;
+}
+
+.no-gyms-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  text-align: center;
+}
+
+.no-gyms-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+
+.no-gyms-mini p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.gyms-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  gap: 10px;
+}
+
+.gyms-loading p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--green-700);
+  font-weight: 500;
+}
+
+.spinner-mini {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--green-100);
+  border-top-color: var(--green-600);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.retry-btn {
+  margin-top: 8px;
+  padding: 8px 16px;
+  background: var(--green-600);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.retry-btn:hover {
+  background: var(--green-700);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(22, 163, 74, 0.2);
+}
 
 .footer { border-top: 1px solid var(--green-100); padding: 20px 0; color: #2f4d3b; font-size: 14px; }
 
@@ -445,7 +1073,7 @@ onBeforeUnmount(() => {
   
   .card-grid { grid-template-columns: 1fr; }
   .two-col { grid-template-columns: 1fr; }
-  .explore__grid { grid-template-columns: 1fr; }
+  .explore__content { grid-template-columns: 1fr; }
 }
 
 /* Animation Styles */
