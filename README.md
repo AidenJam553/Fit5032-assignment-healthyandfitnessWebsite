@@ -216,3 +216,139 @@ The application includes an advanced **Explore Gyms** feature with interactive m
 - Admin users are automatically redirected to `/admin` after login
 - Regular users are redirected to `/`
 - **IMPORTANT**: Change the admin credentials in production by setting ADMIN_EMAIL and ADMIN_PASSWORD environment variables
+
+## Voice Assistant Guide
+
+The application features an intelligent voice assistant that helps users navigate and interact with the website using natural language commands.
+
+### Getting Started
+
+1. **Access the Voice Assistant**: Look for the floating voice assistant button in the bottom-left corner of the screen
+2. **Enable Microphone**: Grant microphone permissions when prompted
+3. **Start Speaking**: Click the "Record" button and speak your command clearly
+
+### Available Voice Commands
+
+#### Navigation Commands
+The voice assistant understands natural language and can navigate to different pages:
+
+**Home Page:**
+- "Go to home" / "Home page" / "Main page"
+- "Go home" / "Back to home" / "Return home"
+
+**Forum Page:**
+- "Open forum" / "Go to forum" / "Forum"
+- "I want to talk to people" / "Where can I share?"
+- "Community" / "Discussion" / "Chat"
+
+**Learning Page:**
+- "Start learning" / "Go to learn" / "Courses"
+- "I want to look some courses" / "Show me what I can learn"
+- "I want to study" / "Where are the tutorials?"
+- "Training" / "Education" / "Lessons"
+
+**Records Page:**
+- "View records" / "Health records" / "My records"
+- "Show me my progress" / "I want to see my data"
+- "Where are my stats?" / "Track my health"
+- "My progress" / "Analytics"
+
+**Explore Page:**
+- "Explore" / "Discovery page" / "Find gyms"
+- "Where can I find gyms?" / "Show me nearby locations"
+- "I want to discover fitness places" / "Gyms nearby"
+- "Search gym" / "Find fitness center"
+
+**Profile Page:**
+- "My profile" / "Profile page" / "Show my profile"
+- "I want to edit my information" / "Where are my settings?"
+- "Account" / "Personal information" / "My details"
+
+#### Function Commands
+
+**Search:**
+- "Search gym" / "Find gym" / "Look for gyms"
+- "Where are gyms nearby?" / "Find fitness places"
+
+**Help:**
+- "Help" / "What can you do?" / "What are my options?"
+
+**Logout:**
+- "Logout" / "Sign out" / "Log out"
+
+### Smart Features
+
+#### Natural Language Understanding
+The voice assistant uses advanced AI to understand your intent, even with casual or incomplete phrases:
+
+**Examples:**
+- "I want to look some courses" → Opens learning page
+- "Show me my progress" → Opens records page
+- "Where can I find gyms?" → Opens explore page
+- "I want to talk to people" → Opens forum page
+
+#### Voice Feedback
+- **Enable/Disable**: Toggle voice responses with the "Mute"/"Unmute" button
+- **Repeat Response**: Use "Repeat" to replay the last assistant response
+- **Stop Speaking**: Use "Stop" to interrupt current speech
+
+#### Conversation History
+- View your conversation history with the assistant
+- Clear history anytime with the "Clear" button
+- Help panel shows available commands
+
+### Tips for Best Results
+
+#### Speaking Tips:
+- Speak clearly and at normal pace
+- Use a quiet environment
+- Hold your device close to your mouth
+- Avoid background noise
+
+#### Command Tips:
+- Use natural language - don't worry about exact phrases
+- Be specific about what you want to do
+- The assistant understands context and intent
+
+### Troubleshooting
+
+#### Common Issues:
+
+**"Page not found" Error:**
+- Ensure you're logged in
+- Try simpler commands like "home", "forum", "learn"
+- Check browser console (F12) for detailed error messages
+
+**Voice Recognition Problems:**
+- Check microphone permissions
+- Speak more clearly and slowly
+- Try alternative phrases
+- Use a quieter environment
+
+**No Response:**
+- Check if voice feedback is enabled
+- Ensure Gemini API key is configured
+- Verify network connection
+
+#### Debug Mode:
+Open browser console (F12) to see detailed logs of:
+- Speech recognition results
+- Command analysis
+- Navigation attempts
+- Error messages
+
+### Technical Requirements
+
+- **Browser Support**: Chrome (recommended), Firefox, Safari, Edge
+- **Microphone Access**: Required for voice input
+- **Internet Connection**: Required for AI processing
+- **API Keys**: Gemini API key for intelligent command processing
+
+### Environment Setup
+
+Add to your `.env` file:
+```bash
+VITE_GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+**Note**: The voice assistant is only available for logged-in users and appears as a floating button in the bottom-left corner of the screen.
