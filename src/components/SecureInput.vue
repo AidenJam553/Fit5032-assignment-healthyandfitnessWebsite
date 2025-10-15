@@ -105,19 +105,19 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'validation-change', 'focus', 'blur'])
 
-// 内部状态
+// Internal state
 const inputId = ref(`secure-input-${Math.random().toString(36).substr(2, 9)}`)
 const isFocused = ref(false)
 const hasBeenBlurred = ref(false)
 const internalValue = ref(props.modelValue)
 
-// 计算属性
+// Computed properties
 const displayValue = computed(() => {
-  // 对于密码类型，不显示实际值
+  // For password type, do not show actual value
   if (props.type === 'password') {
     return internalValue.value
   }
-  // 对于其他类型，进行HTML转义
+  // For other types, perform HTML escaping
   return escapeHtml(internalValue.value)
 })
 
@@ -137,7 +137,7 @@ const isValid = computed(() => {
   return validation.valid
 })
 
-// 密码强度计算
+// Password strength calculation
 const strengthLevel = computed(() => {
   if (props.type !== 'password' || !props.showStrength) return ''
   
@@ -164,17 +164,17 @@ const strengthMessage = computed(() => {
   return validation.message
 })
 
-// 方法
+// Methods
 function validateInput() {
   const value = internalValue.value
   
-  // 检查危险内容
+  // Check for dangerous content
   const dangerCheck = checkForDangerousContent(value)
   if (!dangerCheck.safe) {
     return { valid: false, message: 'Potentially dangerous content detected' }
   }
   
-  // 根据类型进行验证
+  // Validate based on type
   switch (props.type) {
     case 'email':
       return validateEmail(value) ? { valid: true } : { valid: false, message: 'Invalid email format' }
@@ -219,10 +219,10 @@ function calculatePasswordScore(password) {
 function handleInput(event) {
   let value = event.target.value
   
-  // 清理输入
+  // Clean input
   value = sanitizeInput(value)
   
-  // 限制长度
+  // Limit length
   if (value.length > props.maxLength) {
     value = value.substring(0, props.maxLength)
   }
@@ -244,12 +244,12 @@ function handleBlur(event) {
   emit('validation-change', { valid: isValid.value, message: errorMessage.value })
 }
 
-// 监听外部值变化
+// Listen for external value changes
 watch(() => props.modelValue, (newValue) => {
   internalValue.value = newValue || ''
 })
 
-// 监听验证状态变化
+// Listen for validation state changes
 watch(isValid, (newValid) => {
   emit('validation-change', { valid: newValid, message: errorMessage.value })
 })
@@ -366,10 +366,10 @@ watch(isValid, (newValid) => {
   margin-top: 4px;
 }
 
-/* 响应式设计 */
+/* Responsive design */
 @media (max-width: 640px) {
   .secure-input__field {
-    font-size: 16px; /* 防止iOS缩放 */
+    font-size: 16px; /* Prevent iOS zoom */
   }
 }
 </style>

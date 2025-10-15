@@ -1,6 +1,6 @@
-// 简化的Google OAuth实现
+// Simplified Google OAuth implementation
 export function initializeGoogleAuth(clientId, callback) {
-  // 加载Google Identity Services
+  // Load Google Identity Services
   const script = document.createElement('script')
   script.src = 'https://accounts.google.com/gsi/client'
   script.async = true

@@ -19,11 +19,11 @@ async function onSubmit() {
   error.value = ''
   loading.value = true
   
-  // 输入验证和清理
+  // Input validation and sanitization
   const cleanEmail = sanitizeInput(email.value)
   const cleanPassword = sanitizeInput(password.value)
   
-  // 验证邮箱格式
+  // Validate email format
   if (!validateEmail(cleanEmail)) {
     error.value = 'Please enter a valid email address'
     loading.value = false
@@ -34,7 +34,7 @@ async function onSubmit() {
   loading.value = false
   if (!res.ok) { error.value = res.error; return }
   
-  // 根据用户角色重定向
+  // Redirect based on user role
   router.push(getRedirectForUser(res.user))
 }
 
@@ -159,23 +159,23 @@ function loadGisAndRender() {
 }
 
 onMounted(async () => { 
-  // 检查是否有Google OAuth回调
+  // Check if there is a Google OAuth callback
   const callback = await handleSimpleGoogleCallback()
   if (callback.success && callback.user) {
-    // Google OAuth登录成功
+    // Google OAuth login successful
     console.log('Google OAuth login successful:', callback.user)
     error.value = ''
     
-    // 重定向用户到主页或管理页面
+    // Redirect user to homepage or admin page
     const redirectPath = getRedirectForUser(callback.user)
     router.push(redirectPath)
     return
   } else if (callback.error) {
-    // Google OAuth登录失败
+    // Google OAuth login failed
     console.error('Google OAuth login failed:', callback.error)
     error.value = `Google login failed: ${callback.error}`
   } else {
-    // 正常加载Google登录
+    // Normal Google login loading
     loadGisAndRender()
   }
   

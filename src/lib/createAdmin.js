@@ -1,5 +1,5 @@
-// 管理员账号创建工具
-// 在浏览器控制台中运行此脚本来创建管理员账号
+// Admin account creation tool
+// Run this script in browser console to create admin account
 
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
 import { auth } from './firebase.js'
@@ -7,34 +7,34 @@ import { userService } from './firebaseService.js'
 
 export async function createAdminAccount(email = 'admin@admin.com', password = 'Admin123!', username = 'Administrator') {
   try {
-    console.log('🔐 开始创建管理员账号...')
+    console.log('🔐 Starting to create admin account...')
     
-    // 检查管理员账号是否已存在
+    // Check if admin account already exists
     const existingUser = await userService.getUserByEmail(email)
     if (existingUser.ok) {
-      console.log('❌ 管理员账号已存在！')
-      console.log('邮箱:', email)
-      console.log('用户名:', existingUser.user.username)
-      console.log('角色:', existingUser.user.role)
+      console.log('❌ Admin account already exists!')
+      console.log('Email:', email)
+      console.log('Username:', existingUser.user.username)
+      console.log('Role:', existingUser.user.role)
       return { ok: false, error: 'Admin account already exists' }
     }
     
-    // 验证密码强度
+    // Validate password strength
     if (password.length < 8) {
-      console.log('❌ 密码长度至少8位')
+      console.log('❌ Password must be at least 8 characters')
       return { ok: false, error: 'Password must be at least 8 characters' }
     }
     
-    // 使用Firebase Auth创建管理员账户
+    // Use Firebase Auth to create admin account
     const userCredential = await createUserWithEmailAndPassword(auth, email, password)
     const user = userCredential.user
     
-    // 更新用户的显示名称
+    // Update user display name
     await updateProfile(user, {
       displayName: username
     })
     
-    // 创建管理员用户数据在Firestore中
+    // Create admin user data in Firestore
     const adminData = {
       id: user.uid,
       username: username,
@@ -53,46 +53,46 @@ export async function createAdminAccount(email = 'admin@admin.com', password = '
       ]
     }
     
-    // 在Firestore中创建用户文档
+    // Create user document in Firestore
     const result = await userService.createUser(adminData)
     
     if (result.ok) {
-      console.log('✅ 管理员账号创建成功！')
-      console.log('邮箱:', email)
-      console.log('密码:', password)
-      console.log('用户名:', username)
-      console.log('角色:', adminData.role)
-      console.log('权限:', adminData.permissions)
+      console.log('✅ Admin account created successfully!')
+      console.log('Email:', email)
+      console.log('Password:', password)
+      console.log('Username:', username)
+      console.log('Role:', adminData.role)
+      console.log('Permissions:', adminData.permissions)
       console.log('Firebase UID:', user.uid)
       console.log('')
-      console.log('⚠️  请立即登录并修改密码！')
-      console.log('登录地址: /login')
+      console.log('⚠️  Please login immediately and change password!')
+      console.log('Login URL: /login')
       
       return { ok: true, user: result.user }
     } else {
-      console.log('❌ 创建失败:', result.error)
+      console.log('❌ Creation failed:', result.error)
       return result
     }
     
   } catch (error) {
-    console.error('❌ 创建管理员账号失败:', error)
-    let errorMessage = '创建失败';
+    console.error('❌ Failed to create admin account:', error)
+    let errorMessage = 'Creation failed';
     
     if (error.code === 'auth/email-already-in-use') {
-      errorMessage = '邮箱已被使用';
+      errorMessage = 'Email already in use';
     } else if (error.code === 'auth/weak-password') {
-      errorMessage = '密码太弱';
+      errorMessage = 'Password too weak';
     } else if (error.code === 'auth/invalid-email') {
-      errorMessage = '无效的邮箱地址';
+      errorMessage = 'Invalid email address';
     }
     
     return { ok: false, error: errorMessage };
   }
 }
 
-// 在浏览器控制台中使用的便捷函数
+// Convenience function for use in browser console
 window.createAdmin = createAdminAccount
 
-// 使用示例：
-// createAdmin() // 使用默认值
-// createAdmin('admin@example.com', 'MySecurePassword123!', 'MyAdmin') // 自定义值
+// Usage examples:
+// createAdmin() // Use default values
+// createAdmin('admin@example.com', 'MySecurePassword123!', 'MyAdmin') // Custom values

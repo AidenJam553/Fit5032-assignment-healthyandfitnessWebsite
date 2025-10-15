@@ -15,24 +15,24 @@ export function useAuth() {
   const user = ref(null)
   const loading = ref(true)
 
-  // 初始化用户状态
+  // Initialize user state
   const initAuth = () => {
     const currentUser = getCurrentUser()
     user.value = currentUser
     loading.value = false
   }
 
-  // 更新用户状态
+  // Update user state
   const updateUser = (newUser) => {
     user.value = newUser
   }
 
-  // 清除用户状态
+  // Clear user state
   const clearUser = () => {
     user.value = null
   }
 
-  // 计算属性
+  // Computed properties
   const isLoggedIn = computed(() => isUserLoggedIn())
   const isAdmin = computed(() => isCurrentUserAdmin())
   const userRole = computed(() => getCurrentUserRole())
@@ -40,42 +40,42 @@ export function useAuth() {
   const userInfo = computed(() => getCurrentUserInfo())
   const isUser = computed(() => isRegularUser())
 
-  // 权限检查函数
+  // Permission check function
   const checkPermission = (permission) => {
     return hasPermission(permission)
   }
 
-  // 角色检查函数
+  // Role check function
   const hasRole = (role) => {
     return userRole.value === role
   }
 
-  // 检查是否为特定用户
+  // Check if user is specific user
   const isUser = (targetUserId) => {
     return userId.value === targetUserId
   }
 
-  // 检查是否可以访问管理功能
+  // Check if can access admin functions
   const canAccessAdmin = () => {
     return isAdmin.value
   }
 
-  // 检查是否可以编辑内容
+  // Check if can edit content
   const canEdit = (authorId) => {
     return isAdmin.value || userId.value === authorId
   }
 
-  // 检查是否可以删除内容
+  // Check if can delete content
   const canDelete = (authorId) => {
     return isAdmin.value || userId.value === authorId
   }
 
-  // 检查是否可以创建内容
+  // Check if can create content
   const canCreate = () => {
     return isLoggedIn.value
   }
 
-  // 检查是否可以查看内容
+  // Check if can view content
   const canView = () => {
     return isLoggedIn.value
   }
@@ -85,11 +85,11 @@ export function useAuth() {
   })
 
   return {
-    // 状态
+    // State
     user,
     loading,
     
-    // 计算属性
+    // Computed properties
     isLoggedIn,
     isAdmin,
     userRole,
@@ -97,7 +97,7 @@ export function useAuth() {
     userInfo,
     isUser,
     
-    // 方法
+    // Methods
     updateUser,
     clearUser,
     checkPermission,

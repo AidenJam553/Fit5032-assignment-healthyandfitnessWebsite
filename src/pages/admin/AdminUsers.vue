@@ -7,7 +7,7 @@ import { userService } from '@/lib/firebaseService'
 
 const router = useRouter()
 
-// 用户管理状态
+// User management state
 const users = ref([])
 const loading = ref(false)
 const error = ref('')
@@ -16,7 +16,7 @@ const selectedUsers = ref([])
 const showDeleteModal = ref(false)
 const userToDelete = ref(null)
 
-// 列搜索状态 - BR (D.3): Individual column search
+// Column search state - BR (D.3): Individual column search
 const columnSearch = ref({
   username: '',
   email: '',
@@ -25,19 +25,19 @@ const columnSearch = ref({
   createdAt: ''
 })
 
-// 排序状态 - BR (D.3): Sort functionality
+// Sort state - BR (D.3): Sort functionality
 const sortColumn = ref('createdAt')
 const sortOrder = ref('desc') // 'asc' or 'desc'
 
-// 分页状态 - BR (D.3): Pagination with 10 rows per page
+// Pagination state - BR (D.3): Pagination with 10 rows per page
 const currentPage = ref(1)
 const itemsPerPage = 10
 
-// 计算属性 - 过滤
+// Computed properties - filtering
 const filteredUsers = computed(() => {
   let result = [...users.value]
   
-  // 全局搜索
+  // Global search
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
     result = result.filter(user => 
@@ -48,7 +48,7 @@ const filteredUsers = computed(() => {
     )
   }
   
-  // 按列搜索 - BR (D.3): Search by individual column
+  // Column search - BR (D.3): Search by individual column
   if (columnSearch.value.username) {
     const query = columnSearch.value.username.toLowerCase()
     result = result.filter(user => user.username?.toLowerCase().includes(query))
@@ -80,7 +80,7 @@ const filteredUsers = computed(() => {
   return result
 })
 
-// 计算属性 - 排序 - BR (D.3): Sort functionality
+// Computed properties - sorting - BR (D.3): Sort functionality
 const sortedUsers = computed(() => {
   const result = [...filteredUsers.value]
   
@@ -88,11 +88,11 @@ const sortedUsers = computed(() => {
     let aVal = a[sortColumn.value]
     let bVal = b[sortColumn.value]
     
-    // 处理 undefined/null 值
+    // Handle undefined/null values
     if (aVal === undefined || aVal === null) aVal = ''
     if (bVal === undefined || bVal === null) bVal = ''
     
-    // 转换为字符串进行比较
+    // Convert to string for comparison
     aVal = String(aVal).toLowerCase()
     bVal = String(bVal).toLowerCase()
     
@@ -106,7 +106,7 @@ const sortedUsers = computed(() => {
   return result
 })
 
-// 计算属性 - 分页 - BR (D.3): Limit to 10 rows per page
+// Computed properties - pagination - BR (D.3): Limit to 10 rows per page
 const paginatedUsers = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
   const end = start + itemsPerPage
@@ -121,7 +121,7 @@ const totalUsers = computed(() => users.value.length)
 const adminUsers = computed(() => users.value.filter(user => user.role === 'admin').length)
 const regularUsers = computed(() => users.value.filter(user => user.role === 'user').length)
 
-// 加载所有用户
+// Load all users
 async function loadUsers() {
   loading.value = true
   error.value = ''
@@ -138,7 +138,7 @@ async function loadUsers() {
   }
 }
 
-// 删除用户 - 调用后端 API 同时删除 Auth 和 Firestore
+// Delete user - call backend API to delete from both Auth and Firestore
 async function deleteUser(user) {
   console.log('Delete user called with:', user)
   
@@ -165,7 +165,7 @@ async function deleteUser(user) {
     console.log('Delete result:', result)
     
     if (result.ok) {
-      // 从列表中移除用户
+      // Remove user from list
       users.value = users.value.filter(u => u.id !== user.id)
       
       let message = result.message || 'User deleted successfully'
@@ -189,27 +189,27 @@ async function deleteUser(user) {
   }
 }
 
-// 排序功能 - BR (D.3): Sort functionality
+// Sort functionality - BR (D.3): Sort functionality
 function sortBy(column) {
   if (sortColumn.value === column) {
-    // 同一列，切换排序顺序
+    // Same column, toggle sort order
     sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
   } else {
-    // 不同列，默认降序
+    // Different column, default to descending
     sortColumn.value = column
     sortOrder.value = 'desc'
   }
-  // 排序后重置到第一页
+  // Reset to first page after sorting
   currentPage.value = 1
 }
 
-// 获取排序图标
+// Get sort icon
 function getSortIcon(column) {
   if (sortColumn.value !== column) return '⇅'
   return sortOrder.value === 'asc' ? '↑' : '↓'
 }
 
-// 分页功能 - BR (D.3): Pagination controls
+// Pagination functionality - BR (D.3): Pagination controls
 function goToPage(page) {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page
@@ -228,7 +228,7 @@ function prevPage() {
   }
 }
 
-// 清除所有搜索
+// Clear all search
 function clearAllSearch() {
   searchQuery.value = ''
   columnSearch.value = {
@@ -241,16 +241,16 @@ function clearAllSearch() {
   currentPage.value = 1
 }
 
-// 清除列搜索
+// Clear column search
 function clearColumnSearch(column) {
   columnSearch.value[column] = ''
   currentPage.value = 1
 }
 
-// 用户角色只读 - 不允许修改
-// 管理员角色由系统管理，普通用户注册时自动分配
+// User roles are read-only - not allowed to modify
+// Admin roles are managed by the system, regular users are automatically assigned during registration
 
-// 切换用户选择
+// Toggle user selection
 function toggleUserSelection(userId) {
   const index = selectedUsers.value.indexOf(userId)
   if (index > -1) {
@@ -260,7 +260,7 @@ function toggleUserSelection(userId) {
   }
 }
 
-// 全选/取消全选（当前页）
+// Select all/deselect all (current page)
 function toggleSelectAll() {
   if (selectedUsers.value.length === paginatedUsers.value.length && paginatedUsers.value.length > 0) {
     selectedUsers.value = []
@@ -269,7 +269,7 @@ function toggleSelectAll() {
   }
 }
 
-// 批量删除用户
+// Batch delete users
 async function deleteSelectedUsers() {
   if (selectedUsers.value.length === 0) return
   
@@ -282,7 +282,7 @@ async function deleteSelectedUsers() {
       await userService.deleteUser(userId)
     }
     
-    // 从列表中移除已删除的用户
+    // Remove deleted users from list
     users.value = users.value.filter(user => !selectedUsers.value.includes(user.id))
     selectedUsers.value = []
     showSuccessMessage(`${selectedUsers.value.length} users deleted successfully`)
@@ -292,30 +292,30 @@ async function deleteSelectedUsers() {
   }
 }
 
-// 格式化日期
+// Format date
 function formatDate(dateInput) {
   if (!dateInput) return 'N/A'
   
   let date
   
-  // 处理 Firestore Timestamp 对象
+  // Handle Firestore Timestamp objects
   if (dateInput && typeof dateInput === 'object' && dateInput.seconds) {
     date = new Date(dateInput.seconds * 1000)
   }
-  // 处理字符串格式
+  // Handle string format
   else if (typeof dateInput === 'string') {
     date = new Date(dateInput)
   }
-  // 处理 Date 对象
+  // Handle Date objects
   else if (dateInput instanceof Date) {
     date = dateInput
   }
-  // 其他情况，尝试直接转换
+  // Other cases, try direct conversion
   else {
     date = new Date(dateInput)
   }
   
-  // 检查日期是否有效
+  // Check if date is valid
   if (isNaN(date.getTime())) {
     return 'Invalid Date'
   }
@@ -329,25 +329,25 @@ function formatDate(dateInput) {
   })
 }
 
-// 获取用户头像
+// Get user avatar
 function getUserAvatar(user) {
   if (user.avatarDataUrl) return user.avatarDataUrl
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username || user.email)}&background=10b981&color=fff&size=40`
 }
 
-// 显示成功消息
+// Show success message
 function showSuccessMessage(message) {
-  // 这里可以集成一个通知系统
+  // A notification system can be integrated here
   alert(message)
 }
 
-// 显示错误消息
+// Show error message
 function showErrorMessage(message) {
-  // 这里可以集成一个通知系统
+  // A notification system can be integrated here
   alert(message)
 }
 
-// 页面加载时获取用户数据
+// Load user data when page loads
 onMounted(() => {
   loadUsers()
 })
@@ -367,7 +367,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- 统计卡片 -->
+      <!-- Statistics cards -->
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-icon">👥</div>
@@ -392,7 +392,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- 搜索和操作栏 - BR (D.3): Search functionality -->
+      <!-- Search and action bar - BR (D.3): Search functionality -->
       <div class="toolbar">
         <div class="search-container">
           <input 
@@ -422,12 +422,12 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- 搜索结果信息 - BR (D.3): Display filtered results -->
+      <!-- Search results info - BR (D.3): Display filtered results -->
       <div class="search-info">
         <span>Showing {{ paginatedUsers.length }} of {{ sortedUsers.length }} users (Total: {{ totalUsers }})</span>
       </div>
 
-      <!-- 用户列表 -->
+      <!-- User list -->
       <div class="users-container">
         <div v-if="loading" class="loading-state">
           <div class="loading-spinner"></div>
@@ -642,7 +642,7 @@ onMounted(() => {
             ⟨
           </button>
           
-          <!-- 页码按钮 -->
+          <!-- Page number buttons -->
           <template v-for="page in totalPages" :key="page">
             <button 
               v-if="page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)"
@@ -708,7 +708,7 @@ onMounted(() => {
 
 .admin__content { padding: 24px 0 40px; }
 
-/* 页面头部 */
+/* Page header */
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -728,7 +728,7 @@ onMounted(() => {
   gap: 12px;
 }
 
-/* 统计卡片 */
+/* Statistics cards */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -774,7 +774,7 @@ onMounted(() => {
   font-size: 0.875rem;
 }
 
-/* 工具栏 */
+/* Toolbar */
 .toolbar {
   display: flex;
   justify-content: space-between;
@@ -829,7 +829,7 @@ onMounted(() => {
   gap: 12px;
 }
 
-/* 搜索结果信息 */
+/* Search results info */
 .search-info {
   margin-bottom: 12px;
   padding: 8px 12px;
@@ -841,7 +841,7 @@ onMounted(() => {
   font-weight: 500;
 }
 
-/* 用户容器 */
+/* User container */
 .users-container {
   background: white;
   border: 1px solid #e2e8f0;
@@ -850,7 +850,7 @@ onMounted(() => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* 加载状态 */
+/* Loading state */
 .loading-state, .error-state, .empty-state {
   padding: 40px;
   text-align: center;
@@ -872,7 +872,7 @@ onMounted(() => {
   100% { transform: rotate(360deg); }
 }
 
-/* 用户表格 */
+/* User table */
 .users-table {
   overflow-x: auto;
 }
@@ -1121,7 +1121,7 @@ onMounted(() => {
   font-size: 0.875rem;
 }
 
-/* 响应式设计 */
+/* Responsive design */
 @media (max-width: 768px) {
   .page-header {
     flex-direction: column;

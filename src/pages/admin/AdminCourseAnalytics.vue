@@ -21,7 +21,7 @@ import { saveAs } from 'file-saver'
 
 const router = useRouter()
 
-// 注册 Chart.js 组件
+// Register Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -32,7 +32,7 @@ ChartJS.register(
   ArcElement
 )
 
-// 状态管理
+// State management
 const courses = ref([])
 const allRatings = ref([])
 const loading = ref(false)
@@ -41,12 +41,12 @@ const chartType = ref('topic') // 'topic' or 'difficulty'
 const chartData = ref({})
 const chartOptions = ref({})
 
-// 导出状态
+// Export state
 const exportLoading = ref(false)
 const exportProgress = ref(0)
 const showExportModal = ref(false)
 
-// 计算属性
+// Computed properties
 const totalRatings = computed(() => allRatings.value.length)
 const coursesWithRatings = computed(() => courses.value.filter(c => c.ratingCount > 0).length)
 const averageRating = computed(() => {
@@ -54,13 +54,13 @@ const averageRating = computed(() => {
   return (allRatings.value.reduce((sum, r) => sum + r.rating, 0) / allRatings.value.length).toFixed(1)
 })
 
-// 加载数据
+// Load data
 async function loadData() {
   loading.value = true
   try {
     console.log('Loading courses and ratings for analytics...')
     
-    // 并行加载课程和评分数据
+    // Load courses and rating data in parallel
     const [coursesData, ratingsData] = await Promise.all([
       courseService.getAllCourses(),
       courseRatingService.getAllRatings()
@@ -71,7 +71,7 @@ async function loadData() {
     
     console.log(`Loaded ${coursesData.length} courses and ${ratingsData.length} ratings`)
     
-    // 生成初始图表数据
+    // Generate initial chart data
     generateChartData()
     
   } catch (err) {
@@ -82,7 +82,7 @@ async function loadData() {
   }
 }
 
-// 生成图表数据
+// Generate chart data
 function generateChartData() {
   if (chartType.value === 'topic') {
     generateTopicChartData()
@@ -91,11 +91,11 @@ function generateChartData() {
   }
 }
 
-// 按 topic 生成图表数据
+// Generate chart data by topic
 function generateTopicChartData() {
   const topicStats = {}
   
-  // 统计每个 topic 的评分分布
+  // Count rating distribution for each topic
   allRatings.value.forEach(rating => {
     const course = courses.value.find(c => c.id === rating.courseId)
     if (course && course.topic) {
@@ -104,7 +104,7 @@ function generateTopicChartData() {
         topicStats[topic] = {
           total: 0,
           sum: 0,
-          ratings: [0, 0, 0, 0, 0] // 1-5星的数量
+          ratings: [0, 0, 0, 0, 0] // Count of 1-5 stars
         }
       }
       
@@ -196,7 +196,7 @@ function generateTopicChartData() {
   }
 }
 
-// 按 difficulty 生成图表数据
+// Generate chart data by difficulty
 function generateDifficultyChartData() {
   const difficultyStats = {
     'Beginner': { total: 0, sum: 0, ratings: [0, 0, 0, 0, 0] },
@@ -204,7 +204,7 @@ function generateDifficultyChartData() {
     'Advanced': { total: 0, sum: 0, ratings: [0, 0, 0, 0, 0] }
   }
   
-  // 统计每个 difficulty 的评分分布
+  // Count rating distribution for each difficulty
   allRatings.value.forEach(rating => {
     const course = courses.value.find(c => c.id === rating.courseId)
     if (course && course.difficulty) {
@@ -232,9 +232,9 @@ function generateDifficultyChartData() {
         label: 'Average Rating',
         data: avgRatings,
         backgroundColor: [
-          'rgba(75, 192, 192, 0.8)', // Beginner - 绿色
-          'rgba(255, 205, 86, 0.8)',  // Intermediate - 黄色
-          'rgba(255, 99, 132, 0.8)'   // Advanced - 红色
+          'rgba(75, 192, 192, 0.8)', // Beginner - green
+          'rgba(255, 205, 86, 0.8)',  // Intermediate - yellow
+          'rgba(255, 99, 132, 0.8)'   // Advanced - red
         ],
         borderColor: [
           'rgba(75, 192, 192, 1)',
@@ -290,13 +290,13 @@ function generateDifficultyChartData() {
   }
 }
 
-// 切换图表类型
+// Switch chart type
 function switchChartType(type) {
   chartType.value = type
   generateChartData()
 }
 
-// 获取热门主题
+// Get top topics
 function getTopTopics() {
   const topicStats = {}
   
@@ -319,10 +319,10 @@ function getTopTopics() {
       count: topicStats[topic].total
     }))
     .sort((a, b) => parseFloat(b.average) - parseFloat(a.average))
-    .slice(0, 5) // 只显示前5个
+    .slice(0, 5) // Only show top 5
 }
 
-// 导出功能
+// Export functionality
 function showExportOptions() {
   showExportModal.value = true
 }
@@ -333,16 +333,16 @@ function closeExportModal() {
   exportProgress.value = 0
 }
 
-// CSV 导出功能
+// CSV export functionality
 async function exportToCSV() {
   exportLoading.value = true
   exportProgress.value = 10
   
   try {
-    // 准备数据
+    // Prepare data
     const csvData = []
     
-    // 添加标题行
+    // Add header row
     csvData.push([
       'Course Title',
       'Topic',
@@ -360,15 +360,15 @@ async function exportToCSV() {
     
     exportProgress.value = 30
     
-    // 添加课程数据
+    // Add course data
     for (const course of courses.value) {
       const courseRatings = allRatings.value.filter(r => r.courseId === course.id)
       const ratingCount = courseRatings.length
       const averageRating = ratingCount > 0 ? 
         (courseRatings.reduce((sum, r) => sum + r.rating, 0) / ratingCount).toFixed(2) : '0.00'
       
-      // 统计各星级数量
-      const starCounts = [0, 0, 0, 0, 0] // 1-5星
+      // Count star ratings
+      const starCounts = [0, 0, 0, 0, 0] // 1-5 stars
       courseRatings.forEach(rating => {
         if (rating.rating >= 1 && rating.rating <= 5) {
           starCounts[rating.rating - 1]++
@@ -383,31 +383,31 @@ async function exportToCSV() {
         ratingCount,
         averageRating,
         allRatings.value.length,
-        starCounts[4], // 5星
-        starCounts[3], // 4星
-        starCounts[2], // 3星
-        starCounts[1], // 2星
-        starCounts[0]  // 1星
+        starCounts[4], // 5 stars
+        starCounts[3], // 4 stars
+        starCounts[2], // 3 stars
+        starCounts[1], // 2 stars
+        starCounts[0]  // 1 star
       ])
     }
     
     exportProgress.value = 70
     
-    // 转换为CSV格式
+    // Convert to CSV format
     const csvContent = csvData.map(row => 
       row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
     ).join('\n')
     
     exportProgress.value = 90
     
-    // 创建并下载文件
+    // Create and download file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const timestamp = new Date().toISOString().split('T')[0]
     saveAs(blob, `course-analytics-${timestamp}.csv`)
     
     exportProgress.value = 100
     
-    // 显示成功消息
+    // Show success message
     setTimeout(() => {
       closeExportModal()
       alert('✅ CSV file exported successfully!')
@@ -420,32 +420,32 @@ async function exportToCSV() {
   }
 }
 
-// PDF 导出功能
+// PDF export functionality
 async function exportToPDF() {
   exportLoading.value = true
   exportProgress.value = 10
   
   try {
-    // 创建PDF文档
+    // Create PDF document
     const doc = new jsPDF('landscape', 'mm', 'a4')
     
     exportProgress.value = 20
     
-    // 添加标题
+    // Add title
     doc.setFontSize(20)
     doc.setFont(undefined, 'bold')
     doc.text('Course Rating Analytics Report', 20, 25)
     
     exportProgress.value = 30
     
-    // 添加生成时间
+    // Add generation time
     doc.setFontSize(10)
     doc.setFont(undefined, 'normal')
     doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, 35)
     
     exportProgress.value = 40
     
-    // 添加统计概览
+    // Add statistics overview
     doc.setFontSize(14)
     doc.setFont(undefined, 'bold')
     doc.text('Summary Statistics', 20, 50)
@@ -459,7 +459,7 @@ async function exportToPDF() {
     
     exportProgress.value = 50
     
-    // 准备表格数据
+    // Prepare table data
     const tableData = []
     const headers = ['Course Title', 'Topic', 'Difficulty', 'Duration', 'Rating Count', 'Average Rating']
     
@@ -481,7 +481,7 @@ async function exportToPDF() {
     
     exportProgress.value = 70
     
-    // 添加表格
+    // Add table
     autoTable(doc, {
       head: [headers],
       body: tableData,
@@ -491,7 +491,7 @@ async function exportToPDF() {
         cellPadding: 2
       },
       headStyles: {
-        fillColor: [22, 163, 74], // 绿色主题
+        fillColor: [22, 163, 74], // Green theme
         textColor: [255, 255, 255],
         fontStyle: 'bold'
       },
@@ -504,7 +504,7 @@ async function exportToPDF() {
     
     exportProgress.value = 85
     
-    // 添加评分分布统计
+    // Add rating distribution statistics
     const finalY = doc.lastAutoTable.finalY + 20
     doc.setFontSize(14)
     doc.setFont(undefined, 'bold')
@@ -513,7 +513,7 @@ async function exportToPDF() {
     doc.setFontSize(10)
     doc.setFont(undefined, 'normal')
     
-    const ratingDistribution = [0, 0, 0, 0, 0] // 1-5星
+    const ratingDistribution = [0, 0, 0, 0, 0] // 1-5 stars
     allRatings.value.forEach(rating => {
       if (rating.rating >= 1 && rating.rating <= 5) {
         ratingDistribution[rating.rating - 1]++
@@ -532,13 +532,13 @@ async function exportToPDF() {
     
     exportProgress.value = 95
     
-    // 保存PDF
+    // Save PDF
     const timestamp = new Date().toISOString().split('T')[0]
     doc.save(`course-analytics-${timestamp}.pdf`)
     
     exportProgress.value = 100
     
-    // 显示成功消息
+    // Show success message
     setTimeout(() => {
       closeExportModal()
       alert('✅ PDF report exported successfully!')
@@ -551,12 +551,12 @@ async function exportToPDF() {
   }
 }
 
-// 返回课程管理
+// Return to course management
 function goBack() {
   router.push('/admin/courses')
 }
 
-// 页面加载时获取数据
+// Load data when page loads
 onMounted(() => {
   loadData()
 })
@@ -581,27 +581,27 @@ onMounted(() => {
 
     <main class="admin__main">
       <div class="container">
-        <!-- 页面标题 -->
+        <!-- Page title -->
         <div class="page-header">
           <h1>📊 Course Rating Analytics</h1>
           <p>Comprehensive analysis of course ratings and performance metrics</p>
         </div>
 
-        <!-- 加载状态 -->
+        <!-- Loading state -->
         <div v-if="loading" class="loading-state">
           <div class="loading-spinner"></div>
           <p>Loading analytics data...</p>
         </div>
 
-        <!-- 错误状态 -->
+        <!-- Error state -->
         <div v-else-if="error" class="error-state">
           <p>❌ {{ error }}</p>
           <Button @click="loadData" variant="primary">Retry</Button>
         </div>
 
-        <!-- 主要内容 -->
+        <!-- Main content -->
         <div v-else class="analytics-content">
-          <!-- 统计概览 -->
+          <!-- Statistics overview -->
           <div class="stats-overview">
             <div class="stat-card">
               <div class="stat-icon">📚</div>
@@ -633,7 +633,7 @@ onMounted(() => {
             </div>
           </div>
 
-          <!-- 图表分析 -->
+          <!-- Chart analysis -->
           <div class="charts-section">
             <div class="charts-header">
               <h2>Rating Distribution Analysis</h2>
@@ -667,7 +667,7 @@ onMounted(() => {
             </div>
           </div>
 
-          <!-- 详细统计 -->
+          <!-- Detailed statistics -->
           <div class="detailed-stats">
             <h3>📋 Detailed Statistics</h3>
             <div class="stats-grid">
@@ -702,7 +702,7 @@ onMounted(() => {
       </div>
     </main>
 
-    <!-- 导出模态框 -->
+    <!-- Export modal -->
     <div v-if="showExportModal" class="modal-overlay" @click="closeExportModal">
       <div class="modal-content export-modal" @click.stop>
         <div class="modal-header">
@@ -759,7 +759,7 @@ onMounted(() => {
             </div>
           </div>
           
-          <!-- 导出进度 -->
+          <!-- Export progress -->
           <div v-if="exportLoading" class="export-progress">
             <div class="progress-bar">
               <div class="progress-fill" :style="{ width: exportProgress + '%' }"></div>
@@ -890,7 +890,7 @@ onMounted(() => {
   gap: 2rem;
 }
 
-/* 统计概览 */
+/* Statistics overview */
 .stats-overview {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -940,7 +940,7 @@ onMounted(() => {
   margin-top: 0.25rem;
 }
 
-/* 图表样式 */
+/* Chart styles */
 .charts-section {
   background: white;
   padding: 2rem;
@@ -1015,7 +1015,7 @@ onMounted(() => {
   font-size: 1.1rem;
 }
 
-/* 详细统计 */
+/* Detailed statistics */
 .detailed-stats {
   background: white;
   padding: 2rem;
@@ -1112,7 +1112,7 @@ onMounted(() => {
   color: var(--gray-600);
 }
 
-/* 响应式设计 */
+/* Responsive design */
 @media (max-width: 768px) {
   .admin__bar-inner {
     flex-direction: column;
@@ -1153,7 +1153,7 @@ onMounted(() => {
   }
 }
 
-/* 导出模态框样式 */
+/* Export modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1309,7 +1309,7 @@ onMounted(() => {
   font-weight: 500;
 }
 
-/* 响应式设计 */
+/* Responsive design */
 @media (max-width: 768px) {
   .modal-overlay {
     padding: 0.5rem;

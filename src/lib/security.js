@@ -1,8 +1,8 @@
-// 安全工具函数 - XSS防护、输入验证、数据清理
+// Security utility functions - XSS protection, input validation, data sanitization
 
 /**
- * XSS防护 - HTML转义
- * 防止恶意脚本注入
+ * XSS Protection - HTML escaping
+ * Prevent malicious script injection
  */
 export function escapeHtml(unsafe) {
   if (typeof unsafe !== 'string') return unsafe
@@ -17,8 +17,8 @@ export function escapeHtml(unsafe) {
 }
 
 /**
- * XSS防护 - 清理HTML内容
- * 移除所有HTML标签，只保留纯文本
+ * XSS Protection - Clean HTML content
+ * Remove all HTML tags, keep only plain text
  */
 export function stripHtml(html) {
   if (typeof html !== 'string') return html
@@ -29,24 +29,24 @@ export function stripHtml(html) {
 }
 
 /**
- * XSS防护 - 安全的HTML内容
- * 只允许安全的HTML标签和属性
+ * XSS Protection - Safe HTML content
+ * Only allow safe HTML tags and attributes
  */
 export function sanitizeHtml(html) {
   if (typeof html !== 'string') return html
   
-  // 创建临时元素
+  // Create temporary element
   const div = document.createElement('div')
   div.innerHTML = html
   
-  // 移除所有script标签
+  // Remove all script tags
   const scripts = div.querySelectorAll('script')
   scripts.forEach(script => script.remove())
   
-  // 移除所有事件处理器
+  // Remove all event handlers
   const allElements = div.querySelectorAll('*')
   allElements.forEach(el => {
-    // 移除所有on*属性
+    // Remove all on* attributes
     Array.from(el.attributes).forEach(attr => {
       if (attr.name.startsWith('on')) {
         el.removeAttribute(attr.name)
@@ -58,7 +58,7 @@ export function sanitizeHtml(html) {
 }
 
 /**
- * 输入验证 - 邮箱格式
+ * Input validation - Email format
  */
 export function validateEmail(email) {
   if (!email || typeof email !== 'string') return false
@@ -68,7 +68,7 @@ export function validateEmail(email) {
 }
 
 /**
- * 输入验证 - 密码强度
+ * Input validation - Password strength
  */
 export function validatePassword(password) {
   if (!password || typeof password !== 'string') {
@@ -101,7 +101,7 @@ export function validatePassword(password) {
 }
 
 /**
- * 输入验证 - 用户名
+ * Input validation - Username
  */
 export function validateUsername(username) {
   if (!username || typeof username !== 'string') {
@@ -118,7 +118,7 @@ export function validateUsername(username) {
     return { valid: false, message: 'Username must be less than 50 characters' }
   }
   
-  // 只允许字母、数字、下划线、连字符
+  // Only allow letters, numbers, underscores, hyphens
   const usernameRegex = /^[a-zA-Z0-9_-]+$/
   if (!usernameRegex.test(trimmed)) {
     return { valid: false, message: 'Username can only contain letters, numbers, underscores, and hyphens' }
@@ -128,7 +128,7 @@ export function validateUsername(username) {
 }
 
 /**
- * 输入验证 - 数字范围
+ * Input validation - Number range
  */
 export function validateNumber(value, min = 0, max = Infinity, fieldName = 'Value') {
   const num = Number(value)
@@ -149,7 +149,7 @@ export function validateNumber(value, min = 0, max = Infinity, fieldName = 'Valu
 }
 
 /**
- * 输入验证 - 文本长度
+ * Input validation - Text length
  */
 export function validateTextLength(text, minLength = 0, maxLength = Infinity, fieldName = 'Text') {
   if (!text || typeof text !== 'string') {
@@ -170,32 +170,32 @@ export function validateTextLength(text, minLength = 0, maxLength = Infinity, fi
 }
 
 /**
- * 输入清理 - 移除危险字符
+ * Input sanitization - Remove dangerous characters
  */
 export function sanitizeInput(input) {
   if (typeof input !== 'string') return input
   
   return input
     .trim()
-    .replace(/[<>]/g, '') // 移除尖括号
-    .replace(/javascript:/gi, '') // 移除javascript:协议
-    .replace(/on\w+=/gi, '') // 移除事件处理器
-    .replace(/script/gi, '') // 移除script关键词
+    .replace(/[<>]/g, '') // Remove angle brackets
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/on\w+=/gi, '') // Remove event handlers
+    .replace(/script/gi, '') // Remove script keywords
 }
 
 /**
- * 输入清理 - 清理用户输入
+ * Input sanitization - Clean user input
  */
 export function cleanUserInput(input) {
   if (typeof input !== 'string') return input
   
   return sanitizeInput(input)
-    .replace(/\s+/g, ' ') // 合并多个空格
-    .substring(0, 1000) // 限制长度
+    .replace(/\s+/g, ' ') // Merge multiple spaces
+    .substring(0, 1000) // Limit length
 }
 
 /**
- * 内容安全策略 - 检查危险内容
+ * Content Security Policy - Check for dangerous content
  */
 export function checkForDangerousContent(content) {
   if (typeof content !== 'string') return { safe: true, warnings: [] }
@@ -203,7 +203,7 @@ export function checkForDangerousContent(content) {
   const warnings = []
   const lowerContent = content.toLowerCase()
   
-  // 检查XSS攻击模式
+  // Check for XSS attack patterns
   const xssPatterns = [
     /<script/i,
     /javascript:/i,
@@ -229,7 +229,7 @@ export function checkForDangerousContent(content) {
 }
 
 /**
- * 数据验证 - 表单数据
+ * Data validation - Form data
  */
 export function validateFormData(formData, rules) {
   const errors = {}
@@ -240,7 +240,7 @@ export function validateFormData(formData, rules) {
     
     let result = { valid: true }
     
-    // 根据规则类型进行验证
+    // Validate based on rule type
     switch (rule.type) {
       case 'email':
         result = validateEmail(value)
@@ -276,7 +276,7 @@ export function validateFormData(formData, rules) {
 }
 
 /**
- * 安全存储 - 安全的localStorage操作
+ * Secure storage - Safe localStorage operations
  */
 export const secureStorage = {
   setItem(key, value) {
@@ -312,7 +312,7 @@ export const secureStorage = {
 }
 
 /**
- * 内容安全策略 - 生成CSP头
+ * Content Security Policy - Generate CSP headers
  */
 export function generateCSP() {
   return {

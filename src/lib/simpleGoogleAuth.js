@@ -1,4 +1,4 @@
-// 简化的Google OAuth实现
+// Simplified Google OAuth implementation
 export function createSimpleGoogleLoginButton(elementId, clientId) {
   const button = document.getElementById(elementId)
   if (!button) {
@@ -27,7 +27,7 @@ export function createSimpleGoogleLoginButton(elementId, clientId) {
     return
   }
   
-  // 创建Google登录按钮
+  // Create Google login button
   button.innerHTML = `
     <button 
       type="button" 
@@ -62,16 +62,16 @@ export function createSimpleGoogleLoginButton(elementId, clientId) {
     </button>
   `
   
-  // 添加点击事件监听器
+  // Add click event listener
   const googleBtn = button.querySelector('.google-login-btn')
   if (googleBtn) {
     googleBtn.addEventListener('click', () => {
       console.log('Google login button clicked')
-      // 使用Google Identity Services
+      // Use Google Identity Services
       if (window.google && window.google.accounts) {
         window.google.accounts.id.prompt()
       } else {
-        // 如果Google Identity Services未加载，使用重定向方式
+        // If Google Identity Services not loaded, use redirect method
         const redirectUri = encodeURIComponent('http://localhost:5173/login')
         const scope = encodeURIComponent('openid email profile')
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -90,7 +90,7 @@ export function createSimpleGoogleLoginButton(elementId, clientId) {
   }
 }
 
-// 处理Google OAuth回调的简化版本
+// Simplified version of Google OAuth callback handler
 export async function handleSimpleGoogleCallback() {
   const urlParams = new URLSearchParams(window.location.search)
   const code = urlParams.get('code')

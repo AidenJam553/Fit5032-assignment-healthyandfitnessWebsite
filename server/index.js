@@ -59,7 +59,7 @@ try {
 
 const app = express()
 
-// 安全中间件
+// Security middleware
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -78,10 +78,10 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }))
 
-// 速率限制
+// Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15分钟
-  max: 100, // 限制每个IP 100个请求
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit 100 requests per IP
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -89,11 +89,11 @@ const limiter = rateLimit({
 
 app.use(limiter)
 
-// CORS配置
+// CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://yourdomain.com'] // 生产环境域名
-    : ['http://localhost:5173', 'http://localhost:5174'], // 开发环境
+    ? ['https://yourdomain.com'] // Production domain
+    : ['http://localhost:5173', 'http://localhost:5174'], // Development environment
   credentials: true
 }))
 
@@ -153,17 +153,17 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true })
 })
 
-// 安全工具函数
+// Security utility functions
 function sanitizeInput(input) {
   if (typeof input !== 'string') return input
   
   return input
     .trim()
-    .replace(/[<>]/g, '') // 移除尖括号
-    .replace(/javascript:/gi, '') // 移除javascript:协议
-    .replace(/on\w+=/gi, '') // 移除事件处理器
-    .replace(/script/gi, '') // 移除script关键词
-    .substring(0, 1000) // 限制长度
+    .replace(/[<>]/g, '') // Remove angle brackets
+    .replace(/javascript:/gi, '') // Remove javascript: protocol
+    .replace(/on\w+=/gi, '') // Remove event handlers
+    .replace(/script/gi, '') // Remove script keywords
+    .substring(0, 1000) // Limit length
 }
 
 function validateEmail(email) {
@@ -226,7 +226,7 @@ app.post('/api/auth/register', (req, res) => {
   try {
     const { username, email, password } = req.body || {}
     
-    // 输入清理和验证
+    // Input sanitization and validation
     const cleanUsername = sanitizeInput(username)
     const cleanEmail = sanitizeInput(email)
     
@@ -235,17 +235,17 @@ app.post('/api/auth/register', (req, res) => {
       return res.status(400).json({ ok: false, error: 'Missing required fields' })
     }
     
-    // 验证邮箱格式
+    // Validate email format
     if (!validateEmail(cleanEmail)) {
       return res.status(400).json({ ok: false, error: 'Invalid email format' })
     }
     
-    // 验证用户名格式
+    // Validate username format
     if (!validateUsername(cleanUsername)) {
       return res.status(400).json({ ok: false, error: 'Username must be 2-50 characters and contain only letters, numbers, underscores, and hyphens' })
     }
     
-    // 检查危险内容
+    // Check for dangerous content
     const usernameCheck = checkForDangerousContent(cleanUsername)
     if (!usernameCheck.safe) {
       return res.status(400).json({ ok: false, error: 'Username contains potentially dangerous content' })
@@ -451,7 +451,7 @@ app.post('/api/auth/google', async (req, res) => {
 
     console.log('Processing Google OAuth code with client ID:', GOOGLE_CLIENT_ID)
 
-    // 使用授权码获取访问令牌
+    // Use authorization code to get access token
     console.log('Attempting to get tokens from Google...')
     const { tokens } = await client.getToken({
       code: code,
@@ -465,10 +465,10 @@ app.post('/api/auth/google', async (req, res) => {
       return res.status(401).json({ ok: false, error: 'Failed to get tokens from Google' })
     }
 
-    // 设置访问令牌
+    // Set access token
     client.setCredentials(tokens)
 
-    // 获取用户信息
+    // Get user information
     console.log('Verifying ID token...')
     const ticket = await client.verifyIdToken({
       idToken: tokens.id_token,

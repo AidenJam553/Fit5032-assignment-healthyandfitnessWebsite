@@ -7,9 +7,9 @@ import { courseService, courseRatingService } from '@/lib/firebaseService'
 
 const router = useRouter()
 
-// 课程管理状态
+// Course management state
 const courses = ref([])
-const allRatings = ref([]) // 存储所有评分数据
+const allRatings = ref([]) // Store all rating data
 const loading = ref(false)
 const error = ref('')
 const searchQuery = ref('')
@@ -18,7 +18,7 @@ const showRatingModal = ref(false)
 const selectedCourse = ref(null)
 const courseRatings = ref([])
 
-// 列搜索状态 - BR (D.3): Individual column search
+// Column search state - BR (D.3): Individual column search
 const columnSearch = ref({
   title: '',
   topic: '',
@@ -27,19 +27,19 @@ const columnSearch = ref({
   rating: ''
 })
 
-// 排序状态 - BR (D.3): Sort functionality
+// Sort state - BR (D.3): Sort functionality
 const sortColumn = ref('title')
 const sortOrder = ref('asc') // 'asc' or 'desc'
 
-// 分页状态 - BR (D.3): Pagination with 10 rows per page
+// Pagination state - BR (D.3): Pagination with 10 rows per page
 const currentPage = ref(1)
 const itemsPerPage = 10
 
-// 计算属性 - 过滤
+// Computed properties - filtering
 const filteredCourses = computed(() => {
   let result = [...courses.value]
   
-  // 全局搜索
+  // Global search
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
     result = result.filter(course => 
@@ -50,7 +50,7 @@ const filteredCourses = computed(() => {
     )
   }
   
-  // 按列搜索 - BR (D.3): Search by individual column
+  // Column search - BR (D.3): Search by individual column
   if (columnSearch.value.title) {
     const query = columnSearch.value.title.toLowerCase()
     result = result.filter(course => course.title?.toLowerCase().includes(query))
@@ -82,7 +82,7 @@ const filteredCourses = computed(() => {
   return result
 })
 
-// 计算属性 - 排序 - BR (D.3): Sort functionality
+// Computed properties - sorting - BR (D.3): Sort functionality
 const sortedCourses = computed(() => {
   const result = [...filteredCourses.value]
   
@@ -90,13 +90,13 @@ const sortedCourses = computed(() => {
     let aVal = a[sortColumn.value]
     let bVal = b[sortColumn.value]
     
-    // 特殊处理评分
+    // Special handling for ratings
     if (sortColumn.value === 'rating') {
       aVal = a.averageRating || 0
       bVal = b.averageRating || 0
     }
     
-    // 特殊处理难度等级 - 按实际难度排序
+    // Special handling for difficulty levels - sort by actual difficulty
     if (sortColumn.value === 'difficulty') {
       const difficultyOrder = {
         'beginner': 1,
@@ -106,15 +106,15 @@ const sortedCourses = computed(() => {
       aVal = difficultyOrder[String(aVal).toLowerCase()] || 0
       bVal = difficultyOrder[String(bVal).toLowerCase()] || 0
       
-      // 难度等级按数字排序
+      // Sort difficulty levels by number
       return sortOrder.value === 'asc' ? aVal - bVal : bVal - aVal
     }
     
-    // 处理 undefined/null 值
+    // Handle undefined/null values
     if (aVal === undefined || aVal === null) aVal = ''
     if (bVal === undefined || bVal === null) bVal = ''
     
-    // 数字类型直接比较，字符串转小写比较
+    // Direct comparison for numbers, convert strings to lowercase for comparison
     if (typeof aVal === 'number' && typeof bVal === 'number') {
       return sortOrder.value === 'asc' ? aVal - bVal : bVal - aVal
     }
@@ -132,7 +132,7 @@ const sortedCourses = computed(() => {
   return result
 })
 
-// 计算属性 - 分页 - BR (D.3): Limit to 10 rows per page
+// Computed properties - pagination - BR (D.3): Limit to 10 rows per page
 const paginatedCourses = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage
   const end = start + itemsPerPage
@@ -145,7 +145,7 @@ const totalPages = computed(() => {
 
 const totalCourses = computed(() => courses.value.length)
 const totalRatings = computed(() => {
-  // 使用 allRatings 数组长度确保与 Analytics 页面一致
+  // Use allRatings array length to ensure consistency with Analytics page
   return allRatings.value.length
 })
 const averageRating = computed(() => {
@@ -154,7 +154,7 @@ const averageRating = computed(() => {
   return (total / courses.value.length).toFixed(1)
 })
 
-// 加载所有课程
+// Load all courses
 async function loadCourses() {
   loading.value = true
   error.value = ''
@@ -164,10 +164,10 @@ async function loadCourses() {
     if (result.ok) {
       courses.value = result.courses || []
       
-      // 加载所有评分数据（与Analytics页面保持一致）
+      // Load all rating data (consistent with Analytics page)
       allRatings.value = await courseRatingService.getAllRatings()
       
-      // 为每个课程加载评分数据
+      // Load rating data for each course
       for (const course of courses.value) {
         await loadCourseRatings(course.id)
       }
@@ -182,13 +182,13 @@ async function loadCourses() {
   }
 }
 
-// 加载课程评分数据
+// Load course rating data
 async function loadCourseRatings(courseId) {
   try {
     const ratings = await courseRatingService.getCourseRatings(courseId)
     const average = await courseRatingService.getAverageRating(courseId)
     
-    // 更新课程数据
+    // Update course data
     const courseIndex = courses.value.findIndex(c => c.id === courseId)
     if (courseIndex !== -1) {
       courses.value[courseIndex].ratings = ratings
@@ -200,9 +200,9 @@ async function loadCourseRatings(courseId) {
   }
 }
 
-// 删除课程（同时删除所有评分）
+// Delete course (also delete all ratings)
 async function deleteCourse(course) {
-  // 计算该课程的实际评分数（使用 allRatings 确保准确）
+  // Calculate actual rating count for this course (use allRatings to ensure accuracy)
   const courseRatingCount = allRatings.value.filter(r => r.courseId === course.id).length
   
   const confirmMessage = `Are you sure you want to delete course "${course.title}"?\n\nThis will also delete all ${courseRatingCount} ratings for this course.\n\nThis action CANNOT be undone!`
@@ -216,7 +216,7 @@ async function deleteCourse(course) {
   try {
     console.log(`Deleting course: ${course.title} (ID: ${course.id})`)
     
-    // 步骤 1: 删除所有该课程的评分
+    // Step 1: Delete all ratings for this course
     let ratingsDeleted = 0
     try {
       const courseRatings = allRatings.value.filter(r => r.courseId === course.id)
@@ -227,7 +227,7 @@ async function deleteCourse(course) {
         ratingsDeleted++
       }
       
-      // 更新 allRatings
+      // Update allRatings
       allRatings.value = allRatings.value.filter(r => r.courseId !== course.id)
       
       console.log(`✅ Deleted ${ratingsDeleted} ratings`)
@@ -235,7 +235,7 @@ async function deleteCourse(course) {
       console.warn('Error deleting ratings:', err.message)
     }
     
-    // 步骤 2: 删除课程
+    // Step 2: Delete course
     const result = await courseService.deleteCourse(course.id)
     
     if (result.ok) {
@@ -252,7 +252,7 @@ async function deleteCourse(course) {
   }
 }
 
-// 查看课程评分详情
+// View course rating details
 async function viewCourseRatings(course) {
   selectedCourse.value = course
   try {
@@ -265,7 +265,7 @@ async function viewCourseRatings(course) {
   }
 }
 
-// 计算评分分布
+// Calculate rating distribution
 function getRatingDistribution(ratings) {
   const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
   ratings.forEach(rating => {
@@ -276,13 +276,13 @@ function getRatingDistribution(ratings) {
   return distribution
 }
 
-// 获取课程评分分布
+// Get course rating distribution
 function getCourseRatingDistribution(course) {
   if (!course.ratings) return { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
   return getRatingDistribution(course.ratings)
 }
 
-// 排序功能 - BR (D.3): Sort functionality
+// Sort functionality - BR (D.3): Sort functionality
 function sortBy(column) {
   if (sortColumn.value === column) {
     sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
@@ -293,13 +293,13 @@ function sortBy(column) {
   currentPage.value = 1
 }
 
-// 获取排序图标
+// Get sort icon
 function getSortIcon(column) {
   if (sortColumn.value !== column) return '⇅'
   return sortOrder.value === 'asc' ? '↑' : '↓'
 }
 
-// 分页功能 - BR (D.3): Pagination controls
+// Pagination functionality - BR (D.3): Pagination controls
 function goToPage(page) {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page
@@ -318,7 +318,7 @@ function prevPage() {
   }
 }
 
-// 清除所有搜索
+// Clear all search
 function clearAllSearch() {
   searchQuery.value = ''
   columnSearch.value = {
@@ -331,13 +331,13 @@ function clearAllSearch() {
   currentPage.value = 1
 }
 
-// 清除列搜索
+// Clear column search
 function clearColumnSearch(column) {
   columnSearch.value[column] = ''
   currentPage.value = 1
 }
 
-// 切换课程选择
+// Toggle course selection
 function toggleCourseSelection(courseId) {
   const index = selectedCourses.value.indexOf(courseId)
   if (index > -1) {
@@ -347,7 +347,7 @@ function toggleCourseSelection(courseId) {
   }
 }
 
-// 全选/取消全选（当前页）
+// Select all/deselect all (current page)
 function toggleSelectAll() {
   if (selectedCourses.value.length === paginatedCourses.value.length && paginatedCourses.value.length > 0) {
     selectedCourses.value = []
@@ -356,11 +356,11 @@ function toggleSelectAll() {
   }
 }
 
-// 批量删除课程（同时删除所有评分）
+// Batch delete courses (also delete all ratings)
 async function deleteSelectedCourses() {
   if (selectedCourses.value.length === 0) return
   
-  // 计算总评分数（使用 allRatings 确保准确性）
+  // Calculate total rating count (use allRatings to ensure accuracy)
   const ratingsToDelete = allRatings.value.filter(r => selectedCourses.value.includes(r.courseId))
   const totalRatingsCount = ratingsToDelete.length
   
@@ -375,7 +375,7 @@ async function deleteSelectedCourses() {
   
   try {
     for (const courseId of selectedCourses.value) {
-      // 删除该课程的所有评分
+      // Delete all ratings for this course
       try {
         const courseRatings = allRatings.value.filter(r => r.courseId === courseId)
         for (const rating of courseRatings) {
@@ -386,14 +386,14 @@ async function deleteSelectedCourses() {
         console.warn(`Error deleting ratings for course ${courseId}:`, err.message)
       }
       
-      // 删除课程
+      // Delete course
       await courseService.deleteCourse(courseId)
     }
     
     const deletedCount = selectedCourses.value.length
     courses.value = courses.value.filter(course => !selectedCourses.value.includes(course.id))
     
-    // 更新 allRatings，移除已删除课程的评分
+    // Update allRatings, remove ratings for deleted courses
     allRatings.value = allRatings.value.filter(r => !selectedCourses.value.includes(r.courseId))
     
     selectedCourses.value = []
@@ -407,7 +407,7 @@ async function deleteSelectedCourses() {
   }
 }
 
-// 格式化日期
+// Format date
 function formatDate(dateString) {
   if (!dateString) return 'N/A'
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -417,7 +417,7 @@ function formatDate(dateString) {
   })
 }
 
-// 获取难度标签样式
+// Get difficulty label style
 function getDifficultyClass(difficulty) {
   switch (difficulty?.toLowerCase()) {
     case 'beginner': return 'difficulty-beginner'
@@ -427,22 +427,22 @@ function getDifficultyClass(difficulty) {
   }
 }
 
-// 显示成功消息
+// Show success message
 function showSuccessMessage(message) {
   alert(message)
 }
 
-// 显示错误消息
+// Show error message
 function showErrorMessage(message) {
   alert(message)
 }
 
-// 跳转到分析页面
+// Navigate to analytics page
 function goToAnalytics() {
   router.push('/admin/courses/analytics')
 }
 
-// 页面加载时获取课程数据
+// Load course data when page loads
 onMounted(() => {
   loadCourses()
 })
@@ -462,7 +462,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- 统计卡片 -->
+      <!-- Statistics cards -->
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-icon">📚</div>
@@ -487,7 +487,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- 搜索和操作栏 - BR (D.3): Search functionality -->
+      <!-- Search and action bar - BR (D.3): Search functionality -->
       <div class="toolbar">
         <div class="search-container">
           <input 
@@ -524,12 +524,12 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- 搜索结果信息 - BR (D.3): Display filtered results -->
+      <!-- Search results info - BR (D.3): Display filtered results -->
       <div class="search-info">
         <span>Showing {{ paginatedCourses.length }} of {{ sortedCourses.length }} courses (Total: {{ totalCourses }})</span>
       </div>
 
-      <!-- 课程列表 - BR (D.3): Interactive Table -->
+      <!-- Course list - BR (D.3): Interactive Table -->
       <div class="courses-container">
         <div v-if="loading" class="loading-state">
           <div class="loading-spinner"></div>
@@ -761,7 +761,7 @@ onMounted(() => {
             ⟨
           </button>
           
-          <!-- 页码按钮 -->
+          <!-- Page number buttons -->
           <template v-for="page in totalPages" :key="page">
             <button 
               v-if="page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)"
@@ -795,7 +795,7 @@ onMounted(() => {
       </div>
 
 
-      <!-- 评分详情模态框 -->
+      <!-- Rating details modal -->
       <div v-if="showRatingModal" class="modal-overlay" @click="showRatingModal = false">
         <div class="modal-content" @click.stop>
           <div class="modal-header">
@@ -887,7 +887,7 @@ onMounted(() => {
 
 .admin__content { padding: 24px 0 40px; }
 
-/* 页面头部 */
+/* Page header */
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -907,7 +907,7 @@ onMounted(() => {
   gap: 12px;
 }
 
-/* 统计卡片 */
+/* Statistics cards */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -953,7 +953,7 @@ onMounted(() => {
   font-size: 0.875rem;
 }
 
-/* 工具栏 */
+/* Toolbar */
 .toolbar {
   display: flex;
   justify-content: space-between;
@@ -1008,7 +1008,7 @@ onMounted(() => {
   gap: 12px;
 }
 
-/* 搜索结果信息 */
+/* Search results info */
 .search-info {
   margin-bottom: 12px;
   padding: 8px 12px;
@@ -1020,7 +1020,7 @@ onMounted(() => {
   font-weight: 500;
 }
 
-/* 课程容器 */
+/* Course container */
 .courses-container {
   background: white;
   border: 1px solid #e2e8f0;
@@ -1029,7 +1029,7 @@ onMounted(() => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* 加载状态 */
+/* Loading state */
 .loading-state, .error-state, .empty-state {
   padding: 40px;
   text-align: center;
@@ -1149,7 +1149,7 @@ onMounted(() => {
   text-align: center;
 }
 
-/* 课程标题单元格 */
+/* Course title cell */
 .course-title-cell {
   min-width: 250px;
 }
@@ -1176,7 +1176,7 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/* 徽章样式 */
+/* Badge styles */
 .topic-badge {
   display: inline-block;
   background: #f3f4f6;
@@ -1231,7 +1231,7 @@ onMounted(() => {
   font-weight: 600;
 }
 
-/* 评分显示 */
+/* Rating display */
 .rating-display {
   display: flex;
   flex-direction: column;
@@ -1328,7 +1328,7 @@ onMounted(() => {
   font-size: 0.875rem;
 }
 
-/* 评分信息 */
+/* Rating info */
 .course-ratings {
   border-top: 1px solid #e5e7eb;
   padding-top: 16px;
@@ -1361,7 +1361,7 @@ onMounted(() => {
   font-weight: 500;
 }
 
-/* 评分分布图 */
+/* Rating distribution chart */
 .rating-distribution {
   display: flex;
   flex-direction: column;
@@ -1403,7 +1403,7 @@ onMounted(() => {
   font-weight: 500;
 }
 
-/* 模态框 */
+/* Modal */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1578,7 +1578,7 @@ onMounted(() => {
   margin: 0;
 }
 
-/* 响应式设计 */
+/* Responsive design */
 @media (max-width: 768px) {
   .page-header {
     flex-direction: column;

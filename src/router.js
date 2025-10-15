@@ -30,13 +30,13 @@ const AdminSystem = () => import('./pages/admin/AdminSystem.vue')
 const AdminAudits = () => import('./pages/admin/AdminAudits.vue')
 
 const routes = [
-  // 公开页面
+  // Public pages
   { path: '/', name: 'home', component: HomePage },
   { path: '/about', name: 'about', component: About },
   { path: '/login', name: 'login', component: AuthLogin },
   { path: '/register', name: 'register', component: AuthRegister },
   
-  // 需要认证的页面
+  // Pages requiring authentication
   { path: '/forum', name: 'forum', component: Forum, meta: { requiresAuth: true } },
   { path: '/forum/new', name: 'forum-new', component: ForumNew, meta: { requiresAuth: true } },
   { path: '/forum/:id', name: 'forum-detail', component: ForumDetail, meta: { requiresAuth: true } },
@@ -48,7 +48,7 @@ const routes = [
   { path: '/profile', name: 'profile', component: ProfileInfo, meta: { requiresAuth: true } },
   { path: '/profile/edit', name: 'profile-edit', component: ProfileEdit, meta: { requiresAuth: true } },
   
-  // 需要管理员权限的页面
+  // Pages requiring admin privileges
   { path: '/admin', name: 'admin-home', component: AdminHome, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/users', component: AdminUsers, meta: { requiresAuth: true, requiresAdmin: true } },
   { path: '/admin/courses', component: AdminCourses, meta: { requiresAuth: true, requiresAdmin: true } },
@@ -72,29 +72,29 @@ const router = createRouter({
 import { requireAdmin, isUserLoggedIn, isCurrentUserAdmin } from './lib/auth'
 
 router.beforeEach((to, from, next) => {
-  // 检查是否需要认证
+  // Check if authentication is required
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
   
-  // 如果页面需要认证但用户未登录
+  // If page requires authentication but user is not logged in
   if (requiresAuth && !isUserLoggedIn()) {
     next({ path: '/login', query: { redirect: to.fullPath } })
     return
   }
   
-  // 如果页面需要管理员权限但用户不是管理员
+  // If page requires admin privileges but user is not admin
   if (requiresAdmin && !isCurrentUserAdmin()) {
     next({ path: '/', query: { error: 'insufficient_permissions' } })
     return
   }
   
-  // 如果已登录用户访问登录页面，重定向到首页
+  // If logged-in user accesses login page, redirect to homepage
   if (to.path === '/login' && isUserLoggedIn()) {
     next('/')
     return
   }
   
-  // 如果已登录用户访问注册页面，重定向到首页
+  // If logged-in user accesses registration page, redirect to homepage
   if (to.path === '/register' && isUserLoggedIn()) {
     next('/')
     return

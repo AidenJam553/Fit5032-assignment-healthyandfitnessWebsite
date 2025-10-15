@@ -33,49 +33,49 @@ function isAdminEmail(email) {
   return adminEmails.includes(email.toLowerCase());
 }
 
-// 检查当前用户是否为管理员
+// Check if current user is admin
 export function isCurrentUserAdmin() {
   const currentUser = getCurrentUser();
   return currentUser && currentUser.role === 'admin';
 }
 
-// 获取当前用户的角色
+// Get current user role
 export function getCurrentUserRole() {
   const currentUser = getCurrentUser();
   return currentUser ? currentUser.role : null;
 }
 
-// 检查用户是否有特定权限
+// Check if user has specific permission
 export function hasPermission(permission) {
   const currentUser = getCurrentUser();
   if (!currentUser) return false;
   
-  // 管理员拥有所有权限
+  // Admin has all permissions
   if (currentUser.role === 'admin') return true;
   
-  // 检查用户权限列表
+  // Check user permission list
   return currentUser.permissions && currentUser.permissions.includes(permission);
 }
 
-// 检查用户是否为普通用户
+// Check if user is regular user
 export function isRegularUser() {
   const currentUser = getCurrentUser();
   return currentUser && currentUser.role === 'user';
 }
 
-// 检查用户是否已登录
+// Check if user is logged in
 export function isUserLoggedIn() {
   const currentUser = getCurrentUser();
   return currentUser !== null;
 }
 
-// 获取当前用户ID
+// Get current user ID
 export function getCurrentUserId() {
   const currentUser = getCurrentUser();
   return currentUser ? currentUser.id : null;
 }
 
-// 获取当前用户信息
+// Get current user info
 export function getCurrentUserInfo() {
   const currentUser = getCurrentUser();
   return currentUser ? {
@@ -91,7 +91,7 @@ export function getRedirectForEmail(email) {
   return isAdminEmail(email) ? '/admin' : '/';
 }
 
-// 根据用户角色获取重定向路径
+// Get redirect path based on user role
 export function getRedirectForUser(user) {
   if (user && user.role === 'admin') {
     return '/admin';
@@ -123,7 +123,7 @@ export function getPasswordStrength(password) {
   // Determine level and message
   let level, message;
   
-  // 检查最低要求
+  // Check minimum requirements
   const hasMinRequirements = checks.hasLower && checks.hasUpper && checks.hasDigit;
   
   if (!hasMinRequirements) {
@@ -150,7 +150,7 @@ export function getPasswordStrength(password) {
 function passwordMeetsPolicy(password) {
   if (!password) return false;
   
-  // 最低要求：必须包含数字、大写字母和小写字母
+  // Minimum requirements: must include numbers, uppercase and lowercase letters
   const hasLower = /[a-z]/.test(password);
   const hasUpper = /[A-Z]/.test(password);
   const hasDigit = /\d/.test(password);
@@ -236,7 +236,7 @@ export async function registerLocal({ username, email, password }) {
       return { ok: false, error: 'Failed to create user profile' };
     }
     
-    // 注册成功后退出登录，要求用户重新登录
+    // Sign out after successful registration, require user to login again
     await signOut(auth);
     
     console.log('Registration successful, user signed out');
@@ -286,7 +286,7 @@ export async function loginLocal({ email, password }) {
     
     const userData = result.user;
     
-    // 调试：打印用户数据
+    // Debug: print user data
     console.log('Login user data:', userData);
     console.log('User role:', userData.role);
     
@@ -297,7 +297,7 @@ export async function loginLocal({ email, password }) {
       role: userData.role 
     });
     
-    // 调试：打印设置后的当前用户
+    // Debug: print current user after setting
     console.log('Current user after login:', getCurrentUser());
     
     return { ok: true, user: { id: user.uid, email: user.email, username: userData.username, role: userData.role } };

@@ -129,9 +129,9 @@ const handleClick = (event) => {
 </script>
 
 <style scoped>
-/* 使用最高优先级层 */
+/* Use highest priority layer */
 @layer button-override {
-  /* CSS Variables - 直接使用具体颜色值避免继承问题 */
+  /* CSS Variables - Use specific color values directly to avoid inheritance issues */
 :root {
   --primary-color: #16a34a;
   --primary-dark: #15803d;
@@ -144,7 +144,7 @@ const handleClick = (event) => {
   --shadow-lg: 0 12px 30px rgba(0,0,0,.12);
 }
 
-/* Base Button Styles - 使用最高优先级 */
+/* Base Button Styles - Use highest priority */
 button.btn,
 a.btn,
 .btn {
@@ -163,7 +163,7 @@ a.btn,
   white-space: nowrap !important;
   user-select: none !important;
   box-shadow: var(--shadow-md) !important;
-  /* 默认样式 - 确保有背景色 */
+  /* Default styles - Ensure background color */
   background: #16a34a !important;
   color: #ffffff !important;
   border: 2px solid #16a34a !important;
@@ -174,7 +174,7 @@ a.btn,
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3), var(--shadow-md);
 }
 
-/* Active状态 - 使用最高优先级 */
+/* Active state - Use highest priority */
 button.btn:active,
 a.btn:active,
 .btn:active {
@@ -182,7 +182,7 @@ a.btn:active,
   box-shadow: none !important;
 }
 
-/* 默认hover状态 - 使用最高优先级 */
+/* Default hover state - Use highest priority */
 button.btn:hover:not(.btn-disabled):not(.btn-loading),
 a.btn:hover:not(.btn-disabled):not(.btn-loading),
 .btn:hover:not(.btn-disabled):not(.btn-loading) {
@@ -193,7 +193,7 @@ a.btn:hover:not(.btn-disabled):not(.btn-loading),
   box-shadow: var(--shadow-lg) !important;
 }
 
-/* Button Active States - 使用最高优先级选择器 */
+/* Button Active States - Use highest priority selectors */
 button.btn.btn-primary:active,
 a.btn.btn-primary:active,
 .btn.btn-primary:active {
@@ -210,7 +210,7 @@ a.btn.btn-secondary:active,
   border-color: #e2e8f0 !important;
 }
 
-/* Button Variants - 使用最高优先级选择器 */
+/* Button Variants - Use highest priority selectors */
 button.btn.btn-primary,
 a.btn.btn-primary,
 .btn.btn-primary {
@@ -386,5 +386,5 @@ a.btn.btn-danger:hover:not(.btn-disabled):not(.btn-loading),
     font-size: 1rem;
   }
 }
-} /* 结束 @layer button-override */
+} /* End @layer button-override */
 </style>

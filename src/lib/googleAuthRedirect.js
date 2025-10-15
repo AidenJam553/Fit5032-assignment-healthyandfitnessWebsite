@@ -1,6 +1,6 @@
-// Google OAuth重定向实现，避免弹窗问题
+// Google OAuth redirect implementation to avoid popup issues
 export function initializeGoogleAuthRedirect(clientId) {
-  // 使用固定的重定向URI，确保与Google Cloud Console配置匹配
+  // Use fixed redirect URI to ensure compatibility with Google Cloud Console configuration
   const redirectUri = encodeURIComponent('http://localhost:5173/login')
   const scope = encodeURIComponent('openid email profile')
   const responseType = 'code'
@@ -15,7 +15,7 @@ export function initializeGoogleAuthRedirect(clientId) {
     `state=google_oauth&` +
     `include_granted_scopes=true`
   
-  // 调试信息
+  // Debug information
   console.log('=== Google OAuth Configuration ===')
   console.log('Client ID:', clientId)
   console.log('Redirect URI:', 'http://localhost:5173/login')
@@ -67,7 +67,7 @@ export function createGoogleLoginButton(elementId, clientId) {
     </button>
   `
   
-  // 添加点击事件监听器
+  // Add click event listener
   const googleBtn = button.querySelector('.google-login-btn')
   if (googleBtn) {
     googleBtn.addEventListener('click', () => {
@@ -79,14 +79,14 @@ export function createGoogleLoginButton(elementId, clientId) {
   }
 }
 
-// 处理Google OAuth回调
+// Handle Google OAuth callback
 export async function handleGoogleCallback() {
   const urlParams = new URLSearchParams(window.location.search)
   const code = urlParams.get('code')
   const error = urlParams.get('error')
   const state = urlParams.get('state')
   
-  // 调试信息
+  // Debug information
   console.log('=== Google OAuth Callback Debug ===')
   console.log('Current URL:', window.location.href)
   console.log('URL search params:', window.location.search)
@@ -95,7 +95,7 @@ export async function handleGoogleCallback() {
   console.log('Error:', error)
   console.log('State:', state)
   
-  // 检查是否是Google OAuth回调
+  // Check if this is a Google OAuth callback
   if (state !== 'google_oauth' && !code && !error) {
     console.log('Not a Google OAuth callback, skipping...')
     return { success: false, error: null }
@@ -111,7 +111,7 @@ export async function handleGoogleCallback() {
     try {
       console.log('Processing Google OAuth code:', code)
       
-      // 将授权码发送到后端进行验证
+      // Send authorization code to backend for verification
       const response = await fetch('http://localhost:5175/api/auth/google', {
         method: 'POST',
         headers: {
@@ -132,11 +132,11 @@ export async function handleGoogleCallback() {
       console.log('Google OAuth result:', result)
       
       if (result.ok) {
-        // 登录成功，保存用户信息到localStorage
+        // Login successful, save user info to localStorage
         localStorage.setItem('currentUser', JSON.stringify(result.user))
         console.log('User saved to localStorage:', result.user)
         
-        // 清除URL中的参数
+        // Clear parameters from URL
         window.history.replaceState({}, document.title, window.location.pathname)
         
         return { success: true, user: result.user }

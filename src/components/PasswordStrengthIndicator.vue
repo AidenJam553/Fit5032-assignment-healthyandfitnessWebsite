@@ -117,5 +117,5 @@ export default {
   text-align: right;
 }
 
-/* 简化的样式，只保留进度条和基本信息 */
+/* Simplified styles, only keep progress bar and basic info */
 </style>

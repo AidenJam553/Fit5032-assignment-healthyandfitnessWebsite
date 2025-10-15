@@ -1,30 +1,30 @@
 <template>
   <div v-if="loading" class="loading">
     <div class="spinner"></div>
-    <p>验证用户权限中...</p>
+    <p>Verifying user permissions...</p>
   </div>
   
   <div v-else-if="!isLoggedIn" class="auth-required">
     <div class="auth-message">
-      <h3>需要登录</h3>
-      <p>请先登录以访问此页面</p>
-      <router-link to="/login" class="btn btn-primary">登录</router-link>
+      <h3>Login Required</h3>
+      <p>Please login to access this page</p>
+      <router-link to="/login" class="btn btn-primary">Login</router-link>
     </div>
   </div>
   
   <div v-else-if="requiresAdmin && !isAdmin" class="admin-required">
     <div class="admin-message">
-      <h3>权限不足</h3>
-      <p>您需要管理员权限才能访问此页面</p>
-      <router-link to="/" class="btn btn-secondary">返回首页</router-link>
+      <h3>Insufficient Permissions</h3>
+      <p>You need admin privileges to access this page</p>
+      <router-link to="/" class="btn btn-secondary">Return to Homepage</router-link>
     </div>
   </div>
   
   <div v-else-if="requiresPermission && !hasRequiredPermission" class="permission-required">
     <div class="permission-message">
-      <h3>权限不足</h3>
-      <p>您没有执行此操作的权限</p>
-      <router-link to="/" class="btn btn-secondary">返回首页</router-link>
+      <h3>Insufficient Permissions</h3>
+      <p>You do not have permission to perform this action</p>
+      <router-link to="/" class="btn btn-secondary">Return to Homepage</router-link>
     </div>
   </div>
   

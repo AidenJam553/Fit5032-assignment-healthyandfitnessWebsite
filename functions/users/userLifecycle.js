@@ -44,7 +44,7 @@ exports.onUserCreate = functions.auth.user().onCreate(async (user) => {
       }
     };
 
-    // 确保使用 Auth UID 作为文档 ID
+    // Ensure using Auth UID as document ID
     await admin.firestore()
       .collection('users')
       .doc(user.uid)

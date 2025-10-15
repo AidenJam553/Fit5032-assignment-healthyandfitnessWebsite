@@ -18,7 +18,7 @@ const showContent = ref(false)
 
 const passwordPolicyOk = computed(() => {
   const p = password.value
-  // 最低要求：必须包含数字、大写字母和小写字母
+  // Minimum requirements: must include numbers, uppercase and lowercase letters
   return p.length >= 6 && /[a-z]/.test(p) && /[A-Z]/.test(p) && /\d/.test(p)
 })
 
@@ -38,26 +38,26 @@ async function onSubmit() {
   }
   
   loading.value = true
-  console.log('开始注册...', { username: username.value, email: email.value })
+  console.log('Starting registration...', { username: username.value, email: email.value })
   
   const res = await registerLocal({ username: username.value, email: email.value, password: password.value })
   
-  console.log('注册结果:', res)
+  console.log('Registration result:', res)
   loading.value = false
   
   if (!res.ok) { 
-    console.error('注册失败:', res.error)
+    console.error('Registration failed:', res.error)
     error.value = res.error
     return 
   }
   
-  // 注册成功后显示成功消息
-  console.log('注册成功，显示成功消息')
+  // Show success message after successful registration
+  console.log('Registration successful, showing success message')
   success.value = 'Registration successful! Redirecting to login...'
   
-  // 2秒后跳转到登录页面
+  // Redirect to login page after 2 seconds
   setTimeout(() => {
-    console.log('跳转到登录页面')
+    console.log('Redirecting to login page')
     router.push('/login')
   }, 2000)
 }
@@ -117,7 +117,7 @@ async function handleGoogleResponse() {
       return 
     }
     
-    // Google登录成功后重定向到首页（因为Google登录是直接登录，不需要再登录）
+    // Redirect to homepage after successful Google login (Google login is direct login, no need to login again)
     router.push('/')
   } catch (e) {
     loading.value = false
@@ -844,7 +844,7 @@ input { border: 1px solid var(--gray-200); border-radius: 8px; padding: 10px; }
   transform: translate(0, 0);
 }
 
-/* 密码要求提示框样式 */
+/* Password requirements tooltip styles */
 .password-requirements {
   margin-top: 16px;
   padding: 12px;
