@@ -1,49 +1,57 @@
 <script setup>
 import AdminHeader from '@/components/AdminHeader.vue'
 
-// Dashboard menu items
+// Dashboard menu items - Available features first, then disabled features
 const menuItems = [
+  // Available features (enabled)
   {
     title: 'Users',
     description: 'Manage user accounts and permissions',
     route: '/admin/users',
     icon: '👥',
-    color: '#3b82f6'
+    color: '#3b82f6',
+    enabled: true
   },
   {
     title: 'Courses',
     description: 'Manage courses and learning materials',
     route: '/admin/courses',
     icon: '📚',
-    color: '#8b5cf6'
-  },
-  {
-    title: 'Posts',
-    description: 'Manage forum posts and discussions',
-    route: '/admin/posts',
-    icon: '📝',
-    color: '#ec4899'
-  },
-  {
-    title: 'Bookings',
-    description: 'View and manage user bookings',
-    route: '/admin/bookings',
-    icon: '📅',
-    color: '#f59e0b'
+    color: '#8b5cf6',
+    enabled: true
   },
   {
     title: 'Email Centre',
     description: 'Send emails and manage templates',
     route: '/admin/email-centre',
     icon: '✉️',
-    color: '#10b981'
+    color: '#10b981',
+    enabled: true
+  },
+  // Disabled features (not yet online)
+  {
+    title: 'Posts',
+    description: 'Manage forum posts and discussions - Not yet online',
+    route: '/admin/posts',
+    icon: '📝',
+    color: '#ec4899',
+    enabled: false // Feature not yet implemented
+  },
+  {
+    title: 'Bookings',
+    description: 'View and manage user bookings - Not yet online',
+    route: '/admin/bookings',
+    icon: '📅',
+    color: '#f59e0b',
+    enabled: false // Feature not yet implemented
   },
   {
     title: 'System/Settings',
-    description: 'Configure system settings',
+    description: 'Configure system settings - Not yet online',
     route: '/admin/system-settings',
     icon: '⚙️',
-    color: '#6366f1'
+    color: '#6366f1',
+    enabled: false // Feature not yet implemented
   }
 ]
 </script>
@@ -59,20 +67,33 @@ const menuItems = [
       </div>
 
       <div class="dashboard-grid">
-        <router-link 
+        <div 
           v-for="item in menuItems" 
           :key="item.route"
-          :to="item.route"
-          class="dashboard-card"
+          :class="['dashboard-card', { 'disabled': !item.enabled }]"
           :style="{ '--card-color': item.color }"
         >
-          <div class="card-icon">{{ item.icon }}</div>
-          <div class="card-content">
-            <h3 class="card-title">{{ item.title }}</h3>
-            <p class="card-description">{{ item.description }}</p>
+          <router-link 
+            v-if="item.enabled"
+            :to="item.route"
+            class="card-link"
+          >
+            <div class="card-icon">{{ item.icon }}</div>
+            <div class="card-content">
+              <h3 class="card-title">{{ item.title }}</h3>
+              <p class="card-description">{{ item.description }}</p>
+            </div>
+            <div class="card-arrow">→</div>
+          </router-link>
+          <div v-else class="card-link disabled-content">
+            <div class="card-icon">{{ item.icon }}</div>
+            <div class="card-content">
+              <h3 class="card-title">{{ item.title }}</h3>
+              <p class="card-description">{{ item.description }}</p>
+            </div>
+            <div class="card-arrow disabled-arrow">🚫</div>
           </div>
-          <div class="card-arrow">→</div>
-        </router-link>
+        </div>
       </div>
     </main>
   </div>
@@ -121,10 +142,26 @@ const menuItems = [
   display: flex;
   align-items: center;
   gap: 20px;
-  text-decoration: none;
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
+}
+
+.card-link {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+
+.disabled-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  cursor: not-allowed;
 }
 
 .dashboard-card::before {
@@ -139,14 +176,40 @@ const menuItems = [
   transition: opacity 0.2s ease;
 }
 
-.dashboard-card:hover {
+.dashboard-card:not(.disabled):hover {
   border-color: var(--card-color);
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);
 }
 
-.dashboard-card:hover::before {
+.dashboard-card:not(.disabled):hover::before {
   opacity: 1;
+}
+
+/* Disabled state styling */
+.dashboard-card.disabled {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dashboard-card.disabled .card-icon {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+.dashboard-card.disabled .card-title {
+  color: #9ca3af;
+}
+
+.dashboard-card.disabled .card-description {
+  color: #9ca3af;
+}
+
+.dashboard-card.disabled .disabled-arrow {
+  color: #9ca3af;
+  font-size: 1.2rem;
 }
 
 .card-icon {
@@ -156,7 +219,7 @@ const menuItems = [
   transition: filter 0.2s ease;
 }
 
-.dashboard-card:hover .card-icon {
+.dashboard-card:not(.disabled):hover .card-icon {
   filter: grayscale(0);
 }
 
@@ -185,7 +248,7 @@ const menuItems = [
   flex-shrink: 0;
 }
 
-.dashboard-card:hover .card-arrow {
+.dashboard-card:not(.disabled):hover .card-arrow {
   color: var(--card-color);
   transform: translateX(4px);
 }
