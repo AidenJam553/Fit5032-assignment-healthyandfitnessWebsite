@@ -1,6 +1,6 @@
 <template>
   <div class="voice-assistant">
-    <!-- 主悬浮按钮 -->
+    <!-- Main floating button -->
     <div 
       class="voice-assistant-button"
       :class="{ 'active': isOpen, 'listening': isListening }"
@@ -21,7 +21,7 @@
       </div>
     </div>
 
-    <!-- 助手面板 -->
+    <!-- Assistant panel -->
     <div v-if="isOpen" class="voice-assistant-panel">
       <div class="panel-header">
         <h3>Voice Assistant</h3>
@@ -29,14 +29,14 @@
       </div>
       
       <div class="panel-content">
-        <!-- 状态显示 -->
+        <!-- Status display -->
         <div class="status-display">
           <div v-if="status" class="status-message" :class="status.type">
             {{ status.message }}
           </div>
         </div>
 
-        <!-- 功能按钮 -->
+        <!-- Function buttons -->
         <div class="function-buttons">
           <button 
             class="function-btn"
@@ -82,7 +82,7 @@
           </button>
         </div>
 
-        <!-- 对话历史 -->
+        <!-- Conversation history -->
         <div class="conversation-history" v-if="conversationHistory.length > 0">
           <h4>Conversation History</h4>
           <div class="history-items">
@@ -101,7 +101,7 @@
           </div>
         </div>
 
-        <!-- 帮助信息 -->
+        <!-- Help information -->
         <div v-if="showHelpPanel" class="help-panel">
           <h4>Available Commands</h4>
           <div class="help-items">
@@ -140,7 +140,7 @@ import { analyzeVoiceCommand, processVoiceCommandWithContext } from '@/lib/voice
 
 const router = useRouter()
 
-// 响应式状态
+// Reactive state
 const isOpen = ref(false)
 const isListening = ref(false)
 const isSupported = ref(false)
@@ -151,13 +151,13 @@ const conversationHistory = ref([])
 const voiceFeedbackEnabled = ref(true)
 const isSpeakingNow = ref(false)
 
-// 语音识别相关
+// Speech recognition related
 let recognition = null
 let speechSynthesis = null
 let speechQueue = []
 let isSpeaking = false
 
-// 初始化
+// Initialize
 onMounted(() => {
   initializeSpeechServices()
 })
@@ -168,9 +168,9 @@ onBeforeUnmount(() => {
   }
 })
 
-// 初始化语音服务
+// Initialize speech services
 function initializeSpeechServices() {
-  // 检查语音识别支持
+  // Check speech recognition support
   if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     recognition = new SpeechRecognition()
@@ -190,7 +190,7 @@ function initializeSpeechServices() {
       const confidence = event.results[0][0].confidence
       console.log('Speech recognition result:', { transcript, confidence })
       
-      // 尝试使用替代结果如果主要结果置信度低
+      // Try using alternative results if main result confidence is low
       let finalTranscript = transcript
       if (confidence < 0.8 && event.results[0].length > 1) {
         finalTranscript = event.results[0][1].transcript
@@ -201,7 +201,7 @@ function initializeSpeechServices() {
     }
     
     recognition.onerror = (event) => {
-      console.error('语音识别错误:', event.error)
+      console.error('Speech recognition error:', event.error)
       isListening.value = false
       setStatus('error', `Recognition error: ${event.error}`)
     }
@@ -215,14 +215,14 @@ function initializeSpeechServices() {
     setStatus('warning', 'Your browser does not support speech recognition')
   }
   
-  // 检查语音合成支持
+  // Check speech synthesis support
   speechSynthesis = window.speechSynthesis
   if (!speechSynthesis) {
-    console.warn('浏览器不支持语音合成')
+    console.warn('Browser does not support speech synthesis')
   }
 }
 
-// 切换助手面板
+// Toggle assistant panel
 function toggleAssistant() {
   isOpen.value = !isOpen.value
   if (isOpen.value) {
@@ -230,17 +230,17 @@ function toggleAssistant() {
   }
 }
 
-// 关闭助手面板
+// Close assistant panel
 function closeAssistant() {
   isOpen.value = false
   if (isListening.value) {
     stopListening()
   }
-  // 清空语音队列
+  // Clear speech queue
   clearSpeechQueue()
 }
 
-// 切换录音状态
+// Toggle recording state
 function toggleListening() {
   if (isListening.value) {
     stopListening()
@@ -249,7 +249,7 @@ function toggleListening() {
   }
 }
 
-// 开始录音
+// Start recording
 function startListening() {
   if (!recognition || !isSupported.value) {
     setStatus('error', 'Speech recognition not available')
@@ -259,65 +259,65 @@ function startListening() {
   try {
     recognition.start()
   } catch (error) {
-    console.error('启动语音识别失败:', error)
+    console.error('Failed to start speech recognition:', error)
     setStatus('error', 'Failed to start recording')
   }
 }
 
-// 停止录音
+// Stop recording
 function stopListening() {
   if (recognition && isListening.value) {
     recognition.stop()
   }
 }
 
-// 处理语音输入
+// Handle voice input
 async function handleVoiceInput(transcript) {
-  console.log('语音输入:', transcript)
+  console.log('Voice input:', transcript)
   
-  // 添加到对话历史
+  // Add to conversation history
   addToHistory('user', transcript)
   
   setStatus('info', 'Processing command...')
   
   try {
-    // 获取当前上下文信息
+    // Get current context information
     const context = {
       currentPage: getCurrentPageName(),
       userRole: getCurrentUserRole(),
       isLoggedIn: isUserLoggedIn()
     }
     
-    console.log('处理上下文:', context)
+    console.log('Processing context:', context)
     
-    // 使用增强的上下文感知指令分析
+    // Use enhanced context-aware command analysis
     const result = await processVoiceCommandWithContext(transcript, context)
     
-    console.log('指令分析结果:', result)
+    console.log('Command analysis result:', result)
     
     if (result.success) {
       await executeCommand(result.command, result.params)
       lastResponse.value = result.response
       addToHistory('assistant', result.response)
       
-      // 语音播报回答
+      // Voice feedback response
       if (speechSynthesis && result.response && voiceFeedbackEnabled.value) {
         speak(result.response)
       }
       
-      // 显示建议的后续操作
+      // Show suggested follow-up actions
       if (result.suggestions && result.suggestions.length > 0) {
         setTimeout(() => {
           const suggestionsText = 'You can try: ' + result.suggestions.join(', ')
           addToHistory('assistant', suggestionsText)
           if (voiceFeedbackEnabled.value) {
-            // 将建议添加到语音队列，确保完整播放
+            // Add suggestions to speech queue to ensure complete playback
             speak(suggestionsText)
           }
         }, 2000)
       }
     } else {
-      // 不显示错误消息，直接给出帮助提示
+      // Don't show error message, directly provide help hints
       const helpMsg = 'I can help you navigate the website. Try saying "go to home", "open forum", or "help" for more options.'
       addToHistory('assistant', helpMsg)
       if (voiceFeedbackEnabled.value) {
@@ -325,7 +325,7 @@ async function handleVoiceInput(transcript) {
       }
     }
   } catch (error) {
-    console.error('处理语音指令失败:', error)
+    console.error('Failed to process voice command:', error)
     const errorMsg = 'An error occurred while processing the command'
     setStatus('error', errorMsg)
     addToHistory('assistant', errorMsg)
@@ -335,7 +335,7 @@ async function handleVoiceInput(transcript) {
   }
 }
 
-// 执行指令
+// Execute command
 async function executeCommand(command, params = {}) {
   switch (command) {
     case 'navigate':
@@ -352,9 +352,9 @@ async function executeCommand(command, params = {}) {
   }
 }
 
-// 页面导航
+// Page navigation
 async function navigateToPage(page) {
-  console.log('尝试导航到页面:', page)
+  console.log('Attempting to navigate to page:', page)
   
   const routes = {
     'home': '/',
@@ -365,21 +365,21 @@ async function navigateToPage(page) {
     'profile': '/profile'
   }
   
-  console.log('可用路由:', routes)
-  console.log('目标路由:', routes[page])
+  console.log('Available routes:', routes)
+  console.log('Target route:', routes[page])
   
   const route = routes[page]
   if (route) {
-    console.log('执行导航到:', route)
+    console.log('Executing navigation to:', route)
     router.push(route)
     setStatus('success', `Navigated to ${getPageName(page)}`)
   } else {
-    console.error('页面未找到:', page)
+    console.error('Page not found:', page)
     setStatus('error', `Page "${page}" not found. Available pages: ${Object.keys(routes).join(', ')}`)
   }
 }
 
-// 搜索功能
+// Search functionality
 async function performSearch(query) {
   if (query.includes('gym') || query.includes('fitness') || query.includes('workout')) {
     router.push('/explore')
@@ -389,7 +389,7 @@ async function performSearch(query) {
   }
 }
 
-// 登出
+// Logout
 async function performLogout() {
   try {
     await logout()
@@ -400,20 +400,20 @@ async function performLogout() {
   }
 }
 
-// 语音合成
+// Speech synthesis
 function speak(text) {
   if (!speechSynthesis || !voiceFeedbackEnabled.value) return
   
-  // 将文本添加到队列
+  // Add text to queue
   speechQueue.push(text)
   
-  // 如果当前没有在播放，开始播放
+  // If not currently playing, start playing
   if (!isSpeaking) {
     processSpeechQueue()
   }
 }
 
-// 处理语音队列
+// Process speech queue
 function processSpeechQueue() {
   if (speechQueue.length === 0) {
     isSpeaking = false
@@ -425,18 +425,18 @@ function processSpeechQueue() {
   isSpeakingNow.value = true
   const text = speechQueue.shift()
   
-  // 停止当前播放
+  // Stop current playback
   speechSynthesis.cancel()
   
-  // 等待一小段时间确保取消完成
+  // Wait a short time to ensure cancellation is complete
   setTimeout(() => {
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = 'en-US'
-    utterance.rate = 0.8  // 稍微慢一点
+    utterance.rate = 0.8  // Slightly slower
     utterance.pitch = 1
     utterance.volume = 0.8
     
-    // 选择合适的声音
+    // Select appropriate voice
     const voices = speechSynthesis.getVoices()
     const englishVoice = voices.find(voice => 
       voice.lang.startsWith('en') && (voice.name.includes('English') || voice.name.includes('US'))
@@ -452,7 +452,7 @@ function processSpeechQueue() {
     
     utterance.onend = () => {
       console.log('Speech synthesis ended')
-      // 播放完成后处理队列中的下一个
+      // After playback is complete, process the next item in queue
       setTimeout(() => {
         processSpeechQueue()
       }, 200)
@@ -463,14 +463,14 @@ function processSpeechQueue() {
       isSpeaking = false
       isSpeakingNow.value = false
       
-      // 如果出错，尝试重试一次
+      // If error occurs, try retry once
       if (event.error === 'interrupted' || event.error === 'synthesis-failed') {
         console.log('Retrying speech synthesis...')
         setTimeout(() => {
           speechSynthesis.speak(utterance)
         }, 500)
       } else {
-        // 其他错误，继续处理队列
+        // Other errors, continue processing queue
         processSpeechQueue()
       }
     }
@@ -487,32 +487,32 @@ function processSpeechQueue() {
   }, 100)
 }
 
-// 重复上次回答
+// Repeat last response
 function speakLastResponse() {
   if (lastResponse.value) {
     speak(lastResponse.value)
   }
 }
 
-// 显示帮助
+// Show help
 function showHelp() {
   showHelpPanel.value = !showHelpPanel.value
 }
 
-// 清空对话历史
+// Clear conversation history
 function clearHistory() {
   conversationHistory.value = []
   lastResponse.value = ''
   setStatus('success', 'Conversation history cleared')
 }
 
-// 切换语音反馈
+// Toggle voice feedback
 function toggleVoiceFeedback() {
   voiceFeedbackEnabled.value = !voiceFeedbackEnabled.value
   const message = voiceFeedbackEnabled.value ? 'Voice feedback enabled' : 'Voice feedback disabled'
   setStatus('info', message)
   
-  // 如果禁用语音反馈，清空队列
+  // If voice feedback is disabled, clear queue
   if (!voiceFeedbackEnabled.value) {
     speechQueue = []
     if (speechSynthesis) {
@@ -524,7 +524,7 @@ function toggleVoiceFeedback() {
   }
 }
 
-// 清空语音队列
+// Clear speech queue
 function clearSpeechQueue() {
   speechQueue = []
   if (speechSynthesis) {
@@ -534,7 +534,7 @@ function clearSpeechQueue() {
   isSpeakingNow.value = false
 }
 
-// 设置状态消息
+// Set status message
 function setStatus(type, message) {
   status.value = { type, message }
   setTimeout(() => {
@@ -542,7 +542,7 @@ function setStatus(type, message) {
   }, 3000)
 }
 
-// 添加到对话历史
+// Add to conversation history
 function addToHistory(type, content) {
   conversationHistory.value.unshift({
     type,
@@ -550,13 +550,13 @@ function addToHistory(type, content) {
     timestamp: new Date()
   })
   
-  // 限制历史记录数量
+  // Limit history record count
   if (conversationHistory.value.length > 10) {
     conversationHistory.value = conversationHistory.value.slice(0, 10)
   }
 }
 
-// 格式化时间
+// Format time
 function formatTime(timestamp) {
   return timestamp.toLocaleTimeString('zh-CN', {
     hour: '2-digit',
@@ -564,7 +564,7 @@ function formatTime(timestamp) {
   })
 }
 
-// 获取页面名称
+// Get page name
 function getPageName(page) {
   const names = {
     'home': 'Home',
@@ -577,7 +577,7 @@ function getPageName(page) {
   return names[page] || page
 }
 
-// 获取当前页面名称
+// Get current page name
 function getCurrentPageName() {
   const route = router.currentRoute.value
   const pathToName = {
@@ -591,7 +591,7 @@ function getCurrentPageName() {
   return pathToName[route.path] || 'unknown'
 }
 
-// 获取当前用户角色
+// Get current user role
 function getCurrentUserRole() {
   const user = getCurrentUser()
   return user ? user.role : 'guest'
@@ -910,7 +910,7 @@ function getCurrentUserRole() {
   color: #666;
 }
 
-/* 响应式设计 */
+/* Responsive design */
 @media (max-width: 768px) {
   .voice-assistant {
     bottom: 15px;

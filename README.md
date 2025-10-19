@@ -205,8 +205,8 @@ The application includes an advanced **Explore Gyms** feature with interactive m
 ## Test accounts (for demo)
 
 - **Admin Account (unique)**: 
-  - Email: `admin1@admin.com` (configurable via ADMIN_EMAIL)
-  - Password: `admin1234A` (configurable via ADMIN_PASSWORD)
+  - Email: `admin@admin.com` (configurable via ADMIN_EMAIL)
+  - Password: `6212515zbhA` (configurable via ADMIN_PASSWORD)
 - Regular users: Can freely register with any email (except the admin email)
 
 **Notes**:
