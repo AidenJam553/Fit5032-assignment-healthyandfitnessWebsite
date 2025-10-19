@@ -2,12 +2,18 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import VoiceAssistant from '@/components/VoiceAssistant.vue'
+import AccessibilityPanel from '@/components/AccessibilityPanel.vue'
 import { isUserLoggedIn } from '@/lib/auth'
 
 const route = useRoute()
 
-// 计算是否显示语音助手（只在用户登录后显示）
+// Calculate whether to show voice assistant (only show when user is logged in)
 const showVoiceAssistant = computed(() => {
+  return isUserLoggedIn()
+})
+
+// Calculate whether to show accessibility panel (only show when user is logged in)
+const showAccessibilityPanel = computed(() => {
   return isUserLoggedIn()
 })
 </script>
@@ -15,6 +21,7 @@ const showVoiceAssistant = computed(() => {
 <template>
   <router-view />
   <VoiceAssistant v-if="showVoiceAssistant" />
+  <AccessibilityPanel v-if="showAccessibilityPanel" />
 </template>
 
 <style scoped>
